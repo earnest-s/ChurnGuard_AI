@@ -78,6 +78,10 @@ jobs:
         run: |
           az account set --subscription "$AZ_SUBSCRIPTION_ID"
           az account show -o table
+          if ! az account list --query "[?id=='$AZ_SUBSCRIPTION_ID'] | length(@)" -o tsv | grep -q '^1$'; then
+            echo "::error::OIDC identity cannot see AZ_SUBSCRIPTION_ID. Check secret value and IAM role assignment for the app registration."
+            exit 1
+          fi
 
       - name: Verify ACR name in Azure context
         run: az acr check-name --name "$ACR_NAME" -o table
