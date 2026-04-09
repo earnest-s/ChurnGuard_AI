@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 const initialFormState = {
   tenure: '',
   monthly_charges: '',
@@ -38,7 +40,7 @@ export default function App() {
         support_calls: Number(formData.support_calls),
       }
 
-      const response = await fetch('http://localhost:8000/predict', {
+      const response = await fetch(`${API_URL}/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +67,7 @@ export default function App() {
     setDriftError('')
 
     try {
-      const response = await fetch('http://localhost:8000/drift-status')
+      const response = await fetch(`${API_URL}/drift-status`)
       if (!response.ok) {
         throw new Error('Failed to fetch drift status.')
       }
@@ -85,7 +87,7 @@ export default function App() {
     setRetrainError('')
 
     try {
-      const response = await fetch('http://localhost:8000/retrain', {
+      const response = await fetch(`${API_URL}/retrain`, {
         method: 'POST',
       })
 
