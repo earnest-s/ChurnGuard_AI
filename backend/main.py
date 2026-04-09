@@ -2,7 +2,7 @@ import logging
 from typing import Any, Awaitable, Callable, Literal
 
 import numpy as np
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel, field_validator
@@ -115,6 +115,10 @@ def _normalized_feature_importance(model: LogisticRegression) -> FeatureImportan
     return FeatureImportance(**importance_map)
 
 
+def _log_event(endpoint: str, data: Any, prediction: Any) -> None:
+    logger.info("%s - %s - %s", endpoint, data, prediction)
+
+
 app = FastAPI(title="Churn Prediction API", version="1.0.0")
 
 app.add_middleware(
@@ -125,7 +129,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.state.model = _train_model()
+app.state.model: LogisticRegression | None = None
+
+
+@app.on_event("startup")
+def startup_event() -> None:
+    app.state.model = _train_model()
+    _log_event("/startup", "model_trained", "N/A")
 
 
 @app.middleware("http")
@@ -134,22 +144,25 @@ async def log_requests(
     call_next: Callable[[Request], Awaitable[Response]],
 ) -> Response:
     endpoint: str = request.url.path
-    logger.info("%s - data=%s - prediction=%s", endpoint, "incoming_request", "N/A")
+    _log_event(endpoint, "incoming_request", "N/A")
     response: Response = await call_next(request)
     return response
 
 
 @app.get("/")
 def healthcheck() -> dict[str, str]:
-    logger.info("%s - data=%s - prediction=%s", "/", "healthcheck", "N/A")
+    _log_event("/", "healthcheck", "N/A")
     return {"message": "Churn API Running"}
 
 
 @app.post("/predict", response_model=ChurnResponse)
 def predict(payload: ChurnRequest) -> ChurnResponse:
-    model: LogisticRegression = app.state.model
+    model = app.state.model
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model is not ready")
+
     payload_data: dict[str, Any] = payload.model_dump()
-    logger.info("%s - data=%s - prediction=%s", "/predict", payload_data, "pending")
+    _log_event("/predict", payload_data, "pending")
 
     input_vector = np.array(
         [
@@ -166,8 +179,7 @@ def predict(payload: ChurnRequest) -> ChurnResponse:
     prediction = "High Risk" if churn_probability >= 0.5 else "Low Risk"
     feature_importance = _normalized_feature_importance(model)
 
-    logger.info(
-        "%s - data=%s - prediction=%s",
+    _log_event(
         "/predict",
         payload_data,
         {"label": prediction, "probability": round(churn_probability, 4)},
