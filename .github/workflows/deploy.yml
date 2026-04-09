@@ -28,7 +28,6 @@ jobs:
       - name: Validate required CI settings
         env:
           ACR_NAME: ${{ secrets.ACR_NAME }}
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -39,17 +38,14 @@ jobs:
             exit 1
           fi
 
-          if [[ -z "$AZURE_CREDENTIALS" ]]; then
-            if [[ -z "$AZURE_CLIENT_ID" || -z "$AZURE_TENANT_ID" || -z "$AZURE_SUBSCRIPTION_ID" ]]; then
-              echo "::error::Set either AZURE_CREDENTIALS or all of AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID"
-              exit 1
-            fi
+          if [[ -z "$AZURE_CLIENT_ID" || -z "$AZURE_TENANT_ID" || -z "$AZURE_SUBSCRIPTION_ID" ]]; then
+            echo "::error::Missing one of required secrets: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID"
+            exit 1
           fi
 
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -129,18 +125,15 @@ jobs:
 
       - name: Validate required CI settings (frontend)
         env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           FRONTEND_STORAGE_ACCOUNT: ${{ secrets.FRONTEND_STORAGE_ACCOUNT }}
         run: |
           echo "Validating required secrets for frontend deploy..."
-          if [[ -z "$AZURE_CREDENTIALS" ]]; then
-            if [[ -z "$AZURE_CLIENT_ID" || -z "$AZURE_TENANT_ID" || -z "$AZURE_SUBSCRIPTION_ID" ]]; then
-              echo "::error::Set either AZURE_CREDENTIALS or all of AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID"
-              exit 1
-            fi
+          if [[ -z "$AZURE_CLIENT_ID" || -z "$AZURE_TENANT_ID" || -z "$AZURE_SUBSCRIPTION_ID" ]]; then
+            echo "::error::Missing one of required secrets: AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID"
+            exit 1
           fi
           if [[ -z "$FRONTEND_STORAGE_ACCOUNT" ]]; then
             echo "::error::Missing required secret: FRONTEND_STORAGE_ACCOUNT"
@@ -150,7 +143,6 @@ jobs:
       - name: Azure login
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
