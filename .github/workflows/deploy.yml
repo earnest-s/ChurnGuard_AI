@@ -63,6 +63,11 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify Azure account context
+        run: |
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
+
       - name: Verify ACR name in Azure context
         run: az acr check-name --name "$ACR_NAME" -o table
 
@@ -158,6 +163,11 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Verify Azure account context
+        run: |
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account show -o table
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -177,10 +187,11 @@ jobs:
         env:
           FRONTEND_STORAGE_ACCOUNT: ${{ secrets.FRONTEND_STORAGE_ACCOUNT }}
         run: |
-          if ! az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+          if ! az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" >/dev/null 2>&1; then
             az storage account create \
               --name "$FRONTEND_STORAGE_ACCOUNT" \
               --resource-group "$RESOURCE_GROUP" \
+              --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
               --location "$LOCATION" \
               --sku Standard_LRS \
               --kind StorageV2
@@ -192,6 +203,7 @@ jobs:
         run: |
           az storage blob service-properties update \
             --account-name "$FRONTEND_STORAGE_ACCOUNT" \
+            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
             --static-website \
             --index-document index.html \
             --404-document index.html \
@@ -199,10 +211,11 @@ jobs:
 
           az storage blob upload-batch \
             --account-name "$FRONTEND_STORAGE_ACCOUNT" \
+            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
             --auth-mode login \
             --destination '$web' \
             --source frontend/dist \
             --overwrite
 
-          FRONTEND_URL="$(az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --query primaryEndpoints.web -o tsv)"
+          FRONTEND_URL="$(az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --query primaryEndpoints.web -o tsv)"
           echo "Frontend deployed. URL: $FRONTEND_URL"
