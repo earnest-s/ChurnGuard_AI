@@ -12,6 +12,12 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
+  const [driftStatus, setDriftStatus] = useState(null)
+  const [driftLoading, setDriftLoading] = useState(false)
+  const [driftError, setDriftError] = useState('')
+  const [retrainLoading, setRetrainLoading] = useState(false)
+  const [retrainMessage, setRetrainMessage] = useState('')
+  const [retrainError, setRetrainError] = useState('')
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -51,6 +57,50 @@ export default function App() {
       setError(err.message || 'Something went wrong while predicting churn.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCheckDrift = async () => {
+    setDriftLoading(true)
+    setDriftError('')
+
+    try {
+      const response = await fetch('http://localhost:8000/drift-status')
+      if (!response.ok) {
+        throw new Error('Failed to fetch drift status.')
+      }
+
+      const data = await response.json()
+      setDriftStatus(data)
+    } catch (err) {
+      setDriftError(err.message || 'Could not load drift status.')
+    } finally {
+      setDriftLoading(false)
+    }
+  }
+
+  const handleRetrain = async () => {
+    setRetrainLoading(true)
+    setRetrainMessage('')
+    setRetrainError('')
+
+    try {
+      const response = await fetch('http://localhost:8000/retrain', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        const details = await response.text()
+        throw new Error(details || 'Retraining failed.')
+      }
+
+      const data = await response.json()
+      setRetrainMessage(data.status)
+      setDriftStatus({ drift_detected: false, drift_count: 0 })
+    } catch (err) {
+      setRetrainError(err.message || 'Could not retrain model.')
+    } finally {
+      setRetrainLoading(false)
     }
   }
 
@@ -179,6 +229,29 @@ export default function App() {
             </section>
           </>
         )}
+
+        <section className="ops-panel">
+          <h3>Monitoring</h3>
+          <div className="ops-actions">
+            <button type="button" onClick={handleCheckDrift} disabled={driftLoading}>
+              {driftLoading ? 'Checking...' : 'Check Drift Status'}
+            </button>
+            <button type="button" onClick={handleRetrain} disabled={retrainLoading}>
+              {retrainLoading ? 'Retraining...' : 'Retrain Model'}
+            </button>
+          </div>
+
+          {driftStatus && (
+            <p className="ops-info">
+              Drift Detected: <strong>{driftStatus.drift_detected ? 'Yes' : 'No'}</strong> | Drift
+              Count: <strong>{driftStatus.drift_count}</strong>
+            </p>
+          )}
+
+          {driftError && <p className="error">{driftError}</p>}
+          {retrainError && <p className="error">{retrainError}</p>}
+          {retrainMessage && <p className="success-message">{retrainMessage}</p>}
+        </section>
       </section>
     </main>
   )
