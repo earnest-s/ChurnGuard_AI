@@ -25,14 +25,28 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Validate required CI settings
+        env:
+          ACR_NAME: ${{ secrets.ACR_NAME }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
-          required=(ACR_NAME AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID)
-          for key in "${required[@]}"; do
-            if [[ -z "${{ secrets[key] }}" ]]; then
-              echo "Missing required secret: $key"
-              exit 1
-            fi
-          done
+          if [[ -z "$ACR_NAME" ]]; then
+            echo "Missing required secret: ACR_NAME"
+            exit 1
+          fi
+          if [[ -z "$AZURE_CLIENT_ID" ]]; then
+            echo "Missing required secret: AZURE_CLIENT_ID"
+            exit 1
+          fi
+          if [[ -z "$AZURE_TENANT_ID" ]]; then
+            echo "Missing required secret: AZURE_TENANT_ID"
+            exit 1
+          fi
+          if [[ -z "$AZURE_SUBSCRIPTION_ID" ]]; then
+            echo "Missing required secret: AZURE_SUBSCRIPTION_ID"
+            exit 1
+          fi
 
       - name: Azure login
         uses: azure/login@v2
