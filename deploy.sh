@@ -73,6 +73,7 @@ az container create \
   --resource-group "${RG}" \
   --name "${ACI_NAME}" \
   --image "${ACR_LOGIN_SERVER}/${IMAGE_NAME}:latest" \
+  --os-type Linux \
   --registry-login-server "${ACR_LOGIN_SERVER}" \
   --registry-username "${ACR_USERNAME}" \
   --registry-password "${ACR_PASSWORD}" \
