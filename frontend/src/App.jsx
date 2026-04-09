@@ -57,6 +57,21 @@ export default function App() {
   const resultClass =
     result?.prediction === 'High Risk' ? 'result high-risk' : 'result low-risk'
 
+  const featureEntries = result?.feature_importance
+    ? Object.entries(result.feature_importance)
+    : []
+
+  const topFeature = featureEntries.reduce(
+    (max, current) => (current[1] > max[1] ? current : max),
+    ['', -Infinity],
+  )
+
+  const toLabel = (name) =>
+    name
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ')
+
   return (
     <main className="page-bg">
       <section className="card">
@@ -127,12 +142,42 @@ export default function App() {
         {error && <p className="error">{error}</p>}
 
         {result && (
-          <article className={resultClass}>
-            <h2>{result.prediction}</h2>
-            <p>
-              Churn Probability: <strong>{(result.churn_probability * 100).toFixed(2)}%</strong>
-            </p>
-          </article>
+          <>
+            <article className={resultClass}>
+              <h2>{result.prediction}</h2>
+              <p>
+                Churn Probability: <strong>{(result.churn_probability * 100).toFixed(2)}%</strong>
+              </p>
+            </article>
+
+            <section className="insights">
+              <h3>Model Insights</h3>
+              <p className="insight-subtitle">
+                Most influential feature: <strong>{toLabel(topFeature[0])}</strong>
+              </p>
+
+              <div className="importance-list">
+                {featureEntries.map(([feature, value]) => {
+                  const isTopFeature = feature === topFeature[0]
+
+                  return (
+                    <div
+                      className={`importance-item ${isTopFeature ? 'top-feature' : ''}`}
+                      key={feature}
+                    >
+                      <div className="importance-header">
+                        <span>{toLabel(feature)}</span>
+                        <strong>{(value * 100).toFixed(1)}%</strong>
+                      </div>
+                      <div className="importance-track">
+                        <div className="importance-fill" style={{ width: `${value * 100}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+          </>
         )}
       </section>
     </main>
