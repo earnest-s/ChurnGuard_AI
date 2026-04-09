@@ -9,10 +9,38 @@ SUFFIX="$(date +%s)$RANDOM"
 ACR_NAME="churnacr${SUFFIX}"
 ACR_NAME="${ACR_NAME:0:24}"
 
+if ! command -v az >/dev/null 2>&1; then
+  echo "Error: Azure CLI (az) is not installed or not in PATH."
+  exit 1
+fi
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "Error: Docker is not installed or not in PATH."
+  exit 1
+fi
+
+echo "Checking Azure login/session..."
+if ! az account show >/dev/null 2>&1; then
+  echo "No active Azure session found. Starting login..."
+  az login --use-device-code
+fi
+
+SUB_COUNT="$(az account list --query 'length([])' -o tsv)"
+if [[ "${SUB_COUNT}" == "0" ]]; then
+  echo "Error: No Azure subscriptions found for the current account."
+  echo "Run: az account list -o table"
+  echo "Then login with the correct account/tenant that has an active subscription."
+  exit 1
+fi
+
+if [[ -n "${AZ_SUBSCRIPTION_ID:-}" ]]; then
+  echo "Using AZ_SUBSCRIPTION_ID=${AZ_SUBSCRIPTION_ID}"
+  az account set --subscription "${AZ_SUBSCRIPTION_ID}"
+fi
+
 echo "Using ACR name: ${ACR_NAME}"
 
-echo "1) Logging into Azure..."
-az login
+echo "1) Azure session ready"
 
 echo "2) Creating resource group..."
 az group create --name "${RG}" --location "${LOCATION}"
