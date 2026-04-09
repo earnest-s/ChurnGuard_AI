@@ -42,6 +42,11 @@ echo "Using ACR name: ${ACR_NAME}"
 
 echo "1) Azure session ready"
 
+echo "1.1) Registering required Azure resource providers..."
+az provider register --namespace Microsoft.ContainerRegistry --wait
+az provider register --namespace Microsoft.ContainerInstance --wait
+az provider register --namespace Microsoft.Network --wait
+
 echo "2) Creating resource group..."
 az group create --name "${RG}" --location "${LOCATION}"
 
