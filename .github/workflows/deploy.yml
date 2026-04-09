@@ -63,9 +63,20 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Normalize subscription id
+        env:
+          AZ_SUBSCRIPTION_RAW: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          AZ_SUBSCRIPTION_ID="$(echo "$AZ_SUBSCRIPTION_RAW" | tr -d '[:space:]')"
+          if [[ ! "$AZ_SUBSCRIPTION_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo "::error::Invalid AZURE_SUBSCRIPTION_ID format after normalization."
+            exit 1
+          fi
+          echo "AZ_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID" >> "$GITHUB_ENV"
+
       - name: Verify Azure account context
         run: |
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "$AZ_SUBSCRIPTION_ID"
           az account show -o table
 
       - name: Verify ACR name in Azure context
@@ -163,9 +174,20 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Normalize subscription id
+        env:
+          AZ_SUBSCRIPTION_RAW: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          AZ_SUBSCRIPTION_ID="$(echo "$AZ_SUBSCRIPTION_RAW" | tr -d '[:space:]')"
+          if [[ ! "$AZ_SUBSCRIPTION_ID" =~ ^[0-9a-fA-F-]{36}$ ]]; then
+            echo "::error::Invalid AZURE_SUBSCRIPTION_ID format after normalization."
+            exit 1
+          fi
+          echo "AZ_SUBSCRIPTION_ID=$AZ_SUBSCRIPTION_ID" >> "$GITHUB_ENV"
+
       - name: Verify Azure account context
         run: |
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "$AZ_SUBSCRIPTION_ID"
           az account show -o table
 
       - name: Setup Node.js
@@ -187,11 +209,11 @@ jobs:
         env:
           FRONTEND_STORAGE_ACCOUNT: ${{ secrets.FRONTEND_STORAGE_ACCOUNT }}
         run: |
-          if ! az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" >/dev/null 2>&1; then
+          if ! az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --subscription "$AZ_SUBSCRIPTION_ID" >/dev/null 2>&1; then
             az storage account create \
               --name "$FRONTEND_STORAGE_ACCOUNT" \
               --resource-group "$RESOURCE_GROUP" \
-              --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+              --subscription "$AZ_SUBSCRIPTION_ID" \
               --location "$LOCATION" \
               --sku Standard_LRS \
               --kind StorageV2
@@ -203,7 +225,7 @@ jobs:
         run: |
           az storage blob service-properties update \
             --account-name "$FRONTEND_STORAGE_ACCOUNT" \
-            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --subscription "$AZ_SUBSCRIPTION_ID" \
             --static-website \
             --index-document index.html \
             --404-document index.html \
@@ -211,11 +233,11 @@ jobs:
 
           az storage blob upload-batch \
             --account-name "$FRONTEND_STORAGE_ACCOUNT" \
-            --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            --subscription "$AZ_SUBSCRIPTION_ID" \
             --auth-mode login \
             --destination '$web' \
             --source frontend/dist \
             --overwrite
 
-          FRONTEND_URL="$(az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" --query primaryEndpoints.web -o tsv)"
+          FRONTEND_URL="$(az storage account show --name "$FRONTEND_STORAGE_ACCOUNT" --resource-group "$RESOURCE_GROUP" --subscription "$AZ_SUBSCRIPTION_ID" --query primaryEndpoints.web -o tsv)"
           echo "Frontend deployed. URL: $FRONTEND_URL"
