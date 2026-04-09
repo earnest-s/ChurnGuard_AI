@@ -27,7 +27,8 @@ BASE_DIR: Path = Path(__file__).resolve().parent
 DATA_DIR: Path = BASE_DIR / "data"
 MODELS_DIR: Path = BASE_DIR / "models"
 PREDICTIONS_CSV_PATH: Path = DATA_DIR / "predictions.csv"
-MODEL_PATH: Path = MODELS_DIR / "model.pkl"
+MODEL_VERSION: str = "v1"
+MODEL_PATH: Path = MODELS_DIR / f"model_{MODEL_VERSION}.pkl"
 
 
 class ChurnRequest(BaseModel):
