@@ -3,3 +3,4 @@ timestamp,tenure,monthly_charges,contract_type,support_calls,churn_probability,p
 2026-04-09T15:50:50.043119+00:00,72.0,20.0,2,0,0.0306,Low Risk
 2026-04-09T15:50:50.049507+00:00,1.0,130.0,0,8,0.9974,High Risk
 2026-04-09T15:52:52.009231+00:00,10.0,50.0,2,1,0.9636,High Risk
+2026-04-09T17:19:13.663418+00:00,2.0,26.0,1,23,0.9957,High Risk
