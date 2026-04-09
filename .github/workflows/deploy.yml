@@ -4,11 +4,16 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 env:
   IMAGE_NAME: churn-api
   RESOURCE_GROUP: churn-rg
-  ACI_NAME: churn-api-instance
+  ACI_NAME: churn-api
+  LOCATION: centralindia
 
 jobs:
   deploy:
@@ -23,39 +28,78 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Select Azure subscription
+        if: ${{ secrets.AZ_SUBSCRIPTION_ID != '' }}
+        run: az account set --subscription "${{ secrets.AZ_SUBSCRIPTION_ID }}"
+
+      - name: Validate required CI settings
+        run: |
+          if [[ -z "${{ secrets.ACR_NAME }}" ]]; then
+            echo "Missing required secret: ACR_NAME"
+            exit 1
+          fi
+
+      - name: Register required Azure providers
+        run: |
+          az provider register --namespace Microsoft.ContainerRegistry --wait
+          az provider register --namespace Microsoft.ContainerInstance --wait
+          az provider register --namespace Microsoft.Network --wait
+
+      - name: Ensure resource group exists
+        run: az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
+
+      - name: Ensure ACR exists
+        env:
+          ACR_NAME: ${{ secrets.ACR_NAME }}
+        run: |
+          if ! az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+            az acr create --resource-group "$RESOURCE_GROUP" --name "$ACR_NAME" --sku Basic --admin-enabled true
+          fi
+
       - name: Build Docker image
         run: |
           docker build -t $IMAGE_NAME:latest ./backend
 
-      - name: Log in to ACR
+      - name: Log in to ACR and get login server
+        env:
+          ACR_NAME: ${{ secrets.ACR_NAME }}
         run: |
-          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} \
-            --username "${{ secrets.ACR_USERNAME }}" \
-            --password-stdin
+          az acr login --name "$ACR_NAME"
+          ACR_LOGIN_SERVER="$(az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --query loginServer -o tsv)"
+          echo "ACR_LOGIN_SERVER=$ACR_LOGIN_SERVER" >> "$GITHUB_ENV"
 
       - name: Tag and push image
         run: |
-          docker tag $IMAGE_NAME:latest ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest
+          docker tag $IMAGE_NAME:latest $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
+          docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
 
-      - name: Deploy to Azure Container Instance
+      - name: Recreate Azure Container Instance
         uses: azure/CLI@v2
         with:
           inlineScript: |
+            ACR_NAME="${{ secrets.ACR_NAME }}"
+            ACR_USERNAME="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
+            ACR_PASSWORD="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
+
+            if az container show --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" >/dev/null 2>&1; then
+              az container delete --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" --yes
+            fi
+
             az container create \
               --resource-group $RESOURCE_GROUP \
               --name $ACI_NAME \
-              --image ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest \
-              --registry-login-server ${{ secrets.ACR_LOGIN_SERVER }} \
-              --registry-username ${{ secrets.ACR_USERNAME }} \
-              --registry-password ${{ secrets.ACR_PASSWORD }} \
+              --location $LOCATION \
+              --image $ACR_LOGIN_SERVER/$IMAGE_NAME:latest \
+              --os-type Linux \
+              --registry-login-server $ACR_LOGIN_SERVER \
+              --registry-username $ACR_USERNAME \
+              --registry-password $ACR_PASSWORD \
               --dns-name-label $ACI_NAME-${{ github.run_number }} \
               --ports 8000 \
               --ip-address Public \
               --cpu 1 \
               --memory 1.5 \
-              --restart-policy Always \
-            || az container update \
-              --resource-group $RESOURCE_GROUP \
-              --name $ACI_NAME \
-              --image ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest
+              --restart-policy Always
+
+            API_URL="http://$(az container show --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" --query ipAddress.fqdn -o tsv):8000"
+            echo "Deployment complete. API URL: $API_URL"
