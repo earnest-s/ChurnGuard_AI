@@ -1,0 +1,61 @@
+name: Deploy Churn API to ACI
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: churn-api
+  RESOURCE_GROUP: churn-rg
+  ACI_NAME: churn-api-instance
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t $IMAGE_NAME:latest ./backend
+
+      - name: Log in to ACR
+        run: |
+          echo "${{ secrets.ACR_PASSWORD }}" | docker login ${{ secrets.ACR_LOGIN_SERVER }} \
+            --username "${{ secrets.ACR_USERNAME }}" \
+            --password-stdin
+
+      - name: Tag and push image
+        run: |
+          docker tag $IMAGE_NAME:latest ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest
+
+      - name: Deploy to Azure Container Instance
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az container create \
+              --resource-group $RESOURCE_GROUP \
+              --name $ACI_NAME \
+              --image ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest \
+              --registry-login-server ${{ secrets.ACR_LOGIN_SERVER }} \
+              --registry-username ${{ secrets.ACR_USERNAME }} \
+              --registry-password ${{ secrets.ACR_PASSWORD }} \
+              --dns-name-label $ACI_NAME-${{ github.run_number }} \
+              --ports 8000 \
+              --ip-address Public \
+              --cpu 1 \
+              --memory 1.5 \
+              --restart-policy Always \
+            || az container update \
+              --resource-group $RESOURCE_GROUP \
+              --name $ACI_NAME \
+              --image ${{ secrets.ACR_LOGIN_SERVER }}/$IMAGE_NAME:latest
