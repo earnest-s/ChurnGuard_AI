@@ -28,9 +28,11 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Select Azure subscription
-        if: ${{ secrets.AZ_SUBSCRIPTION_ID != '' }}
-        run: az account set --subscription "${{ secrets.AZ_SUBSCRIPTION_ID }}"
+      - name: Select Azure subscription (optional)
+        run: |
+          if [[ -n "${{ secrets.AZ_SUBSCRIPTION_ID }}" ]]; then
+            az account set --subscription "${{ secrets.AZ_SUBSCRIPTION_ID }}"
+          fi
 
       - name: Validate required CI settings
         run: |
