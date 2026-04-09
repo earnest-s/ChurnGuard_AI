@@ -43,6 +43,21 @@ jobs:
             exit 1
           fi
 
+      - name: Normalize and validate ACR name
+        env:
+          ACR_NAME_RAW: ${{ secrets.ACR_NAME }}
+        run: |
+          ACR_NAME="$(echo "$ACR_NAME_RAW" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          if [[ ! "$ACR_NAME" =~ ^[a-z0-9]{5,50}$ ]]; then
+            echo "::error::Invalid ACR_NAME after normalization: '$ACR_NAME'. Use only lowercase letters/numbers, 5-50 chars."
+            exit 1
+          fi
+
+          echo "Using ACR_NAME=$ACR_NAME"
+          echo "ACR_NAME=$ACR_NAME" >> "$GITHUB_ENV"
+
+          az acr check-name --name "$ACR_NAME" -o table
+
       - name: Azure login
         uses: azure/login@v2
         with:
@@ -60,11 +75,9 @@ jobs:
         run: az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
 
       - name: Ensure ACR exists
-        env:
-          ACR_NAME: ${{ secrets.ACR_NAME }}
         run: |
           if ! az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
-            az acr create --resource-group "$RESOURCE_GROUP" --name "$ACR_NAME" --sku Basic --admin-enabled true
+            az acr create --resource-group "$RESOURCE_GROUP" --name "$ACR_NAME" --location "$LOCATION" --sku Basic --admin-enabled true
           fi
 
       - name: Build Docker image
@@ -72,8 +85,6 @@ jobs:
           docker build -t $IMAGE_NAME:latest ./backend
 
       - name: Log in to ACR and get login server
-        env:
-          ACR_NAME: ${{ secrets.ACR_NAME }}
         run: |
           az acr login --name "$ACR_NAME"
           ACR_LOGIN_SERVER="$(az acr show --name "$ACR_NAME" --resource-group "$RESOURCE_GROUP" --query loginServer -o tsv)"
@@ -88,7 +99,6 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
-            ACR_NAME="${{ secrets.ACR_NAME }}"
             ACR_USERNAME="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
             ACR_PASSWORD="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
 
