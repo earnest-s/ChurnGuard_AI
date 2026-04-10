@@ -63,6 +63,13 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Ensure Azure CLI installed
+        run: |
+          if ! command -v az >/dev/null 2>&1; then
+            curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          fi
+          az version
+
       - name: Normalize subscription id
         env:
           AZ_SUBSCRIPTION_RAW: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -132,32 +139,30 @@ jobs:
           docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:latest
 
       - name: Recreate Azure Container Instance
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            ACR_USERNAME="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
-            ACR_PASSWORD="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
+        run: |
+          ACR_USERNAME="$(az acr credential show --name "$ACR_NAME" --query username -o tsv)"
+          ACR_PASSWORD="$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)"
 
-            if az container show --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" >/dev/null 2>&1; then
-              az container delete --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" --yes
-            fi
+          if az container show --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" >/dev/null 2>&1; then
+            az container delete --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" --yes
+          fi
 
-            az container create \
-              --resource-group $RESOURCE_GROUP \
-              --name $ACI_NAME \
-              --location $LOCATION \
-              --image $ACR_LOGIN_SERVER/$IMAGE_NAME:latest \
-              --os-type Linux \
-              --registry-login-server $ACR_LOGIN_SERVER \
-              --registry-username $ACR_USERNAME \
-              --registry-password $ACR_PASSWORD \
-              --dns-name-label $ACI_NAME-${{ github.run_number }} \
-              --ports 8000 \
-              --ip-address Public \
-              --cpu 1 \
-              --memory 1.5 \
-              --restart-policy Always
+          az container create \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$ACI_NAME" \
+            --location "$LOCATION" \
+            --image "$ACR_LOGIN_SERVER/$IMAGE_NAME:latest" \
+            --os-type Linux \
+            --registry-login-server "$ACR_LOGIN_SERVER" \
+            --registry-username "$ACR_USERNAME" \
+            --registry-password "$ACR_PASSWORD" \
+            --dns-name-label "$ACI_NAME-${{ github.run_number }}" \
+            --ports 8000 \
+            --ip-address Public \
+            --cpu 1 \
+            --memory 1.5 \
+            --restart-policy Always
 
-            API_URL="http://$(az container show --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" --query ipAddress.fqdn -o tsv):8000"
-            echo "Deployment complete. API URL: $API_URL"
+          API_URL="http://$(az container show --resource-group "$RESOURCE_GROUP" --name "$ACI_NAME" --query ipAddress.fqdn -o tsv):8000"
+          echo "Deployment complete. API URL: $API_URL"
 
