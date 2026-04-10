@@ -26,6 +26,23 @@ export default function App() {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const parseApiResponse = async (response) => {
+    const text = await response.text()
+    let data
+
+    try {
+      data = text ? JSON.parse(text) : {}
+    } catch {
+      throw new Error(`Invalid JSON response: ${text}`)
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || data.message || 'API request failed')
+    }
+
+    return data
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
@@ -48,12 +65,7 @@ export default function App() {
         body: JSON.stringify(payload),
       })
 
-      if (!response.ok) {
-        const details = await response.text()
-        throw new Error(details || 'Prediction request failed.')
-      }
-
-      const data = await response.json()
+      const data = await parseApiResponse(response)
       setResult(data)
     } catch (err) {
       setError(err.message || 'Something went wrong while predicting churn.')
@@ -68,11 +80,7 @@ export default function App() {
 
     try {
       const response = await fetch(`${API_URL}/drift-status`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch drift status.')
-      }
-
-      const data = await response.json()
+      const data = await parseApiResponse(response)
       setDriftStatus(data)
     } catch (err) {
       setDriftError(err.message || 'Could not load drift status.')
@@ -91,12 +99,7 @@ export default function App() {
         method: 'POST',
       })
 
-      if (!response.ok) {
-        const details = await response.text()
-        throw new Error(details || 'Retraining failed.')
-      }
-
-      const data = await response.json()
+      const data = await parseApiResponse(response)
       setRetrainMessage(data.status)
       setDriftStatus({ drift_detected: false, drift_count: 0 })
     } catch (err) {
