@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal
 
 import csv
-import joblib
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,10 +24,7 @@ FEATURE_NAMES: tuple[str, str, str, str] = (
 DRIFT_THRESHOLD: float = 2.0
 BASE_DIR: Path = Path(__file__).resolve().parent
 DATA_DIR: Path = BASE_DIR / "data"
-MODELS_DIR: Path = BASE_DIR / "models"
 PREDICTIONS_CSV_PATH: Path = DATA_DIR / "predictions.csv"
-MODEL_VERSION: str = "v1"
-MODEL_PATH: Path = MODELS_DIR / f"model_{MODEL_VERSION}.pkl"
 
 
 class ChurnRequest(BaseModel):
@@ -141,7 +137,6 @@ def _log_event(endpoint: str, data: Any, prediction: Any) -> None:
 
 def _ensure_storage_paths() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _build_baseline_stats(X: np.ndarray) -> dict[str, tuple[float, float]]:
@@ -151,19 +146,6 @@ def _build_baseline_stats(X: np.ndarray) -> dict[str, tuple[float, float]]:
         std = float(np.std(X[:, idx]))
         stats[feature] = (mean, std)
     return stats
-
-
-def _load_or_train_model() -> LogisticRegression:
-    if MODEL_PATH.exists():
-        loaded_model = joblib.load(MODEL_PATH)
-        if isinstance(loaded_model, LogisticRegression):
-            _log_event("/startup", "model_loaded", str(MODEL_PATH))
-            return loaded_model
-
-    model = _train_model()
-    joblib.dump(model, MODEL_PATH)
-    _log_event("/startup", "model_trained_saved", str(MODEL_PATH))
-    return model
 
 
 def _append_prediction_log(
@@ -292,7 +274,7 @@ def startup_event() -> None:
     _ensure_storage_paths()
     baseline_X, _ = _generate_synthetic_data(rows=1000)
     app.state.baseline_stats = _build_baseline_stats(baseline_X)
-    app.state.model = _load_or_train_model()
+    app.state.model = _train_model()
     app.state.drift_count = 0
     app.state.drift_detected = False
     _log_event("/startup", "baseline_ready", "N/A")
@@ -377,7 +359,6 @@ def retrain_model() -> RetrainResponse:
 
     model = LogisticRegression(max_iter=1000, random_state=42)
     model.fit(X, y)
-    joblib.dump(model, MODEL_PATH)
 
     app.state.model = model
     app.state.baseline_stats = _build_baseline_stats(X)
