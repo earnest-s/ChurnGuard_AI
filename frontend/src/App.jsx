@@ -66,7 +66,15 @@ export default function App() {
       })
 
       const data = await parseApiResponse(response)
-      setResult(data)
+      const probability = data.churn_probability
+      const label = data.prediction
+      const importance = data.feature_importance
+
+      if (typeof probability !== 'number' || typeof label !== 'string') {
+        throw new Error('Invalid prediction response schema')
+      }
+
+      setResult({ probability, label, importance })
     } catch (err) {
       setError(err.message || 'Something went wrong while predicting churn.')
     } finally {
@@ -109,11 +117,10 @@ export default function App() {
     }
   }
 
-  const resultClass =
-    result?.prediction === 'High Risk' ? 'result high-risk' : 'result low-risk'
+  const resultClass = result?.label === 'High Risk' ? 'result high-risk' : 'result low-risk'
 
-  const featureEntries = result?.feature_importance
-    ? Object.entries(result.feature_importance)
+  const featureEntries = result?.importance
+    ? Object.entries(result.importance)
     : []
 
   const topFeature = featureEntries.reduce(
@@ -199,9 +206,9 @@ export default function App() {
         {result && (
           <>
             <article className={resultClass}>
-              <h2>{result.prediction}</h2>
+              <h2>{result.label}</h2>
               <p>
-                Churn Probability: <strong>{(result.churn_probability * 100).toFixed(2)}%</strong>
+                Churn Probability: <strong>{(result.probability * 100).toFixed(2)}%</strong>
               </p>
             </article>
 
