@@ -315,47 +315,52 @@ def healthcheck() -> dict[str, str]:
     return {"message": "Churn API Running"}
 
 
-@app.post("/predict", response_model=ChurnResponse)
-def predict(payload: ChurnRequest) -> ChurnResponse:
-    model = app.state.model
-    if model is None:
-        raise HTTPException(status_code=503, detail="Model is not ready")
+@app.post("/predict")
+def predict(payload: ChurnRequest) -> dict[str, Any]:
+    try:
+        model = app.state.model
+        if model is None:
+            return {"error": "Model is not ready", "message": "Prediction failed"}
 
-    baseline_stats: dict[str, tuple[float, float]] = app.state.baseline_stats
-    if _check_drift(payload, baseline_stats):
-        app.state.drift_count += 1
-        app.state.drift_detected = True
+        baseline_stats: dict[str, tuple[float, float]] = app.state.baseline_stats
+        if _check_drift(payload, baseline_stats):
+            app.state.drift_count += 1
+            app.state.drift_detected = True
 
-    payload_data: dict[str, Any] = payload.model_dump()
-    _log_event("/predict", payload_data, "pending")
+        payload_data: dict[str, Any] = payload.model_dump()
+        _log_event("/predict", payload_data, "pending")
 
-    input_vector = np.array(
-        [
+        input_vector = np.array(
             [
-                payload.tenure,
-                payload.monthly_charges,
-                payload.contract_type,
-                payload.support_calls,
-            ]
-        ],
-        dtype=float,
-    )
-    churn_probability = float(model.predict_proba(input_vector)[0][1])
-    prediction = "High Risk" if churn_probability >= 0.5 else "Low Risk"
-    feature_importance = _normalized_feature_importance(model)
-    _append_prediction_log(payload=payload, churn_probability=churn_probability, prediction=prediction)
+                [
+                    float(payload.tenure),
+                    float(payload.monthly_charges),
+                    int(payload.contract_type),
+                    int(payload.support_calls),
+                ]
+            ],
+            dtype=float,
+        )
 
-    _log_event(
-        "/predict",
-        payload_data,
-        {"label": prediction, "probability": round(churn_probability, 4)},
-    )
+        churn_probability = float(model.predict_proba(input_vector)[0][1])
+        prediction = "High Risk" if churn_probability >= 0.5 else "Low Risk"
+        feature_importance = _normalized_feature_importance(model)
+        _append_prediction_log(payload=payload, churn_probability=churn_probability, prediction=prediction)
 
-    return ChurnResponse(
-        churn_probability=round(churn_probability, 4),
-        prediction=prediction,
-        feature_importance=feature_importance,
-    )
+        _log_event(
+            "/predict",
+            payload_data,
+            {"label": prediction, "probability": round(churn_probability, 4)},
+        )
+
+        return {
+            "churn_probability": round(churn_probability, 4),
+            "prediction": prediction,
+            "feature_importance": feature_importance.model_dump(),
+        }
+    except Exception as exc:
+        logger.error("Prediction error: %s", exc)
+        return {"error": str(exc), "message": "Prediction failed"}
 
 
 @app.get("/drift-status", response_model=DriftStatusResponse)
