@@ -80,6 +80,12 @@ jobs:
           az account show -o table
           ACTIVE_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
           if [[ -z "$ACTIVE_SUBSCRIPTION_ID" ]]; then
+            echo "::error::Unable to resolve active subscription id from Azure context in frontend job."
+            exit 1
+          fi
+          echo "ACTIVE_SUBSCRIPTION_ID=$ACTIVE_SUBSCRIPTION_ID" >> "$GITHUB_ENV"
+          ACTIVE_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
+          if [[ -z "$ACTIVE_SUBSCRIPTION_ID" ]]; then
             echo "::error::Unable to resolve active subscription id from Azure context."
             exit 1
           fi
