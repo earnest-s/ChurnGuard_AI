@@ -1,6 +1,10 @@
 import { useState } from 'react'
 
-const API_URL = import.meta.env.VITE_API_URL
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim()
+const API_URL =
+  typeof window !== 'undefined' && window.location.protocol === 'https:'
+    ? rawApiUrl.replace(/^http:\/\//i, 'https://')
+    : rawApiUrl
 
 const initialFormState = {
   tenure: '',
