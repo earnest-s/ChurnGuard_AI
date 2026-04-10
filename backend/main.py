@@ -1,4 +1,5 @@
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Literal
@@ -24,6 +25,8 @@ FEATURE_NAMES: tuple[str, str, str, str] = (
 DRIFT_THRESHOLD: float = 2.0
 BASE_DIR: Path = Path(__file__).resolve().parent
 DATA_DIR: Path = BASE_DIR / "data"
+MODELS_DIR: Path = BASE_DIR / "models"
+MODEL_PATH: Path = MODELS_DIR / "model_v1.pkl"
 PREDICTIONS_CSV_PATH: Path = DATA_DIR / "predictions.csv"
 
 
@@ -136,7 +139,8 @@ def _log_event(endpoint: str, data: Any, prediction: Any) -> None:
 
 
 def _ensure_storage_paths() -> None:
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(MODELS_DIR, exist_ok=True)
 
 
 def _build_baseline_stats(X: np.ndarray) -> dict[str, tuple[float, float]]:
@@ -367,3 +371,9 @@ def retrain_model() -> RetrainResponse:
     _log_event("/retrain", {"samples": int(X.shape[0])}, "model_retrained")
 
     return RetrainResponse(status="model retrained successfully")
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("main:app", host="0.0.0.0", port=10000)
