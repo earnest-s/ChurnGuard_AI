@@ -323,6 +323,28 @@ def cross_validated_f1(
 # ---------------------------------------------------------------------------
 # AutoML
 # ---------------------------------------------------------------------------
+def _leaderboard_rows(leaderboard: Any) -> list[dict[str, Any]]:
+    """Normalise PyCaret's leaderboard DataFrame into JSON-safe rows."""
+    if leaderboard is None or not hasattr(leaderboard, "to_json"):
+        return []
+    aliases = {
+        "Model": "model",
+        "Accuracy": "accuracy",
+        "AUC": "auc",
+        "Recall": "recall",
+        "Prec.": "precision",
+        "F1": "f1",
+        "Kappa": "kappa",
+        "MCC": "mcc",
+        "TT (Sec)": "tt_sec",
+    }
+    try:
+        records = json.loads(leaderboard.round(4).to_json(orient="records"))
+    except Exception:  # pragma: no cover - unexpected leaderboard shape
+        return []
+    return [{aliases.get(key, str(key)): value for key, value in record.items()} for record in records]
+
+
 def run_pycaret(
     frame: pd.DataFrame,
     fast: bool = False,
@@ -334,7 +356,7 @@ def run_pycaret(
     the script still produces a deployable model in CI / offline machines.
     """
     try:
-        from pycaret.classification import compare_models, predict_model, setup
+        from pycaret.classification import compare_models, predict_model, pull, setup
     except ImportError:
         print("!  PyCaret not installed - skipping AutoML. Install with:")
         print("     pip install -r requirements-train.txt")
@@ -361,11 +383,19 @@ def run_pycaret(
             n_jobs=-1,
         )
         best_model = compare_models(include=list(candidates), n_select=1, sort="F1", verbose=False)
+        leaderboard = _leaderboard_rows(pull())
         holdout = predict_model(best_model, verbose=False)
         pycaret_f1 = round(float(f1_score(holdout[TARGET], holdout["prediction_label"])), 4)
     except Exception as exc:  # pragma: no cover - depends on the AutoML install
         print(f"!  PyCaret run failed ({type(exc).__name__}: {exc}). Using local comparison.")
         return None
+
+    if leaderboard:
+        _print_table(
+            "   PyCaret leaderboard (CV on the training split)",
+            leaderboard,
+            ["model", "f1", "auc", "recall", "precision"],
+        )
 
     estimator = best_model.steps[-1][1] if hasattr(best_model, "steps") else best_model
     name = type(estimator).__name__
@@ -376,6 +406,7 @@ def run_pycaret(
         "estimator": clone(estimator),
         "pycaret_f1": pycaret_f1,
         "candidates": list(candidates),
+        "leaderboard": leaderboard,
     }
 
 
