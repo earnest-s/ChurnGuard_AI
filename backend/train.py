@@ -81,6 +81,7 @@ TARGET = "Churn"
 ID_COLUMN = "customerID"
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
+VALIDATION_SIZE = 0.2
 CV_FOLDS = 5
 MAX_LINE = 100
 
@@ -594,30 +595,33 @@ def explain_model(
     )
 
     bar_path = REPORTS_DIR / "shap_summary_bar.png"
-    figure, axes = plt.subplots(figsize=(10, 6))
-    shap_lib.plots.bar(explanation, max_display=15, show=False, ax=axes)
-    axes.set_title("Global feature importance (mean |SHAP value|)")
+    shap_lib.plots.bar(explanation, max_display=15, show=False)
+    figure = plt.gcf()
+    figure.set_size_inches(10, 6)
+    figure.axes[0].set_title("Global feature importance (mean |SHAP value|)")
     figure.tight_layout()
     figure.savefig(bar_path, dpi=160, bbox_inches="tight")
-    plt.close(figure)
+    plt.close("all")
 
     beeswarm_path = REPORTS_DIR / "shap_beeswarm.png"
-    figure, axes = plt.subplots(figsize=(10, 7))
-    shap_lib.plots.beeswarm(explanation, max_display=15, show=False, ax=axes)
-    axes.set_title("SHAP value distribution per feature")
+    shap_lib.plots.beeswarm(explanation, max_display=15, show=False)
+    figure = plt.gcf()
+    figure.set_size_inches(10, 7)
+    figure.axes[0].set_title("SHAP value distribution per feature")
     figure.tight_layout()
     figure.savefig(beeswarm_path, dpi=160, bbox_inches="tight")
-    plt.close(figure)
+    plt.close("all")
 
     probabilities = pipeline.predict_proba(sample)[:, 1]
     highest_risk = int(np.argmax(probabilities))
     waterfall_path = REPORTS_DIR / "shap_waterfall_high_risk.png"
-    figure, axes = plt.subplots(figsize=(10, 6))
-    shap_lib.plots.waterfall(explanation[highest_risk], max_display=12, show=False, ax=axes)
-    axes.set_title(f"Why this customer is high risk (p={probabilities[highest_risk]:.3f})")
+    shap_lib.plots.waterfall(explanation[highest_risk], max_display=12, show=False)
+    figure = plt.gcf()
+    figure.set_size_inches(10, 6)
+    figure.axes[0].set_title(f"Why this customer is high risk (p={probabilities[highest_risk]:.3f})")
     figure.tight_layout()
     figure.savefig(waterfall_path, dpi=160, bbox_inches="tight")
-    plt.close(figure)
+    plt.close("all")
 
     importance = global_importance(values, transformed_names, raw_names)
     print(f"   SHAP plots written to {REPORTS_DIR}")
@@ -719,12 +723,26 @@ def train(args: argparse.Namespace) -> int:
     winner_name = str(automl["model_name"])
     print(f"   winner: {winner_name}")
 
+    # --- Tuning, accepted only if it wins on a dedicated validation split --
     deployed = build_pipeline(clone(automl["estimator"]), numeric, categorical)
+    selection = "untuned AutoML winner"
+    validation: dict[str, Any] = {}
 
     if args.tune and tuning_grid(winner_name):
+        X_fit, X_val, y_fit, y_val = train_test_split(
+            X_train,
+            y_train,
+            test_size=VALIDATION_SIZE,
+            random_state=RANDOM_STATE,
+            stratify=y_train,
+        )
+        untuned = build_pipeline(clone(automl["estimator"]), numeric, categorical)
+        untuned.fit(X_fit, y_fit)
+        untuned_val = round(float(f1_score(y_val, untuned.predict(X_val))), 4)
+
         print(f"   tuning {winner_name} with a small randomized search ...")
         search = RandomizedSearchCV(
-            deployed,
+            build_pipeline(clone(automl["estimator"]), numeric, categorical),
             param_distributions=tuning_grid(winner_name),
             n_iter=6,
             scoring="f1",
@@ -732,9 +750,24 @@ def train(args: argparse.Namespace) -> int:
             random_state=RANDOM_STATE,
             n_jobs=-1,
         )
-        search.fit(X_train, y_train)
-        deployed = search.best_estimator_
+        search.fit(X_fit, y_fit)
+        tuned_val = round(float(f1_score(y_val, search.best_estimator_.predict(X_val))), 4)
         print(f"   best params: {search.best_params_}")
+        print(f"   validation F1: untuned = {untuned_val:.4f}  tuned = {tuned_val:.4f}")
+
+        validation = {
+            "split_size": VALIDATION_SIZE,
+            "untuned_f1": untuned_val,
+            "tuned_f1": tuned_val,
+            "best_params": {key: str(value) for key, value in search.best_params_.items()},
+        }
+        if tuned_val > untuned_val:
+            deployed = search.best_estimator_
+            selection = f"tuned ({search.best_params_}) - validation F1 {tuned_val:.4f}"
+        else:
+            deployed = untuned
+            selection = f"untuned - validation F1 {untuned_val:.4f} >= tuned {tuned_val:.4f}"
+        print(f"   selected: {selection}")
 
     deployed.fit(X_train, y_train)
     deployed_metrics = evaluate(deployed, X_test, y_test)
@@ -748,20 +781,24 @@ def train(args: argparse.Namespace) -> int:
         {
             "model": "Baseline LogisticRegression",
             "cv_f1_mean": baseline_cv,
-            "cv_f1_std": baseline_cv_std,
             "holdout_f1": baseline_metrics["f1"],
+            "precision": baseline_metrics["precision"],
+            "recall": baseline_metrics["recall"],
+            "roc_auc": baseline_metrics["roc_auc"],
         },
         {
             "model": f"AutoML winner ({winner_name})",
             "cv_f1_mean": deployed_cv,
-            "cv_f1_std": deployed_cv_std,
             "holdout_f1": deployed_metrics["f1"],
+            "precision": deployed_metrics["precision"],
+            "recall": deployed_metrics["recall"],
+            "roc_auc": deployed_metrics["roc_auc"],
         },
     ]
     _print_table(
-        "   Model comparison",
+        "   Model comparison (same stratified holdout)",
         comparison,
-        ["model", "cv_f1_mean", "cv_f1_std", "holdout_f1"],
+        ["model", "cv_f1_mean", "holdout_f1", "precision", "recall", "roc_auc"],
     )
 
     improvement = deployed_metrics["f1"] - baseline_metrics["f1"]
@@ -803,6 +840,8 @@ def train(args: argparse.Namespace) -> int:
         "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "model_name": winner_name,
         "engine": automl["engine"],
+        "selection": selection,
+        "validation": validation,
         "dataset": {
             "source": source,
             "rows": int(len(features)),
@@ -824,6 +863,8 @@ def train(args: argparse.Namespace) -> int:
             },
             "f1_improvement_over_baseline": round(float(improvement), 4),
         },
+        "comparison": comparison,
+        "automl_leaderboard": automl.get("leaderboard") or comparison_rows,
         "numeric_features": numeric,
         "categorical_features": categorical,
         "raw_features": numeric + categorical,
