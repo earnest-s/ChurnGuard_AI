@@ -563,30 +563,30 @@ def explain_model(
     )
 
     bar_path = REPORTS_DIR / "shap_summary_bar.png"
-    plt.figure()
-    shap_lib.plots.bar(explanation, max_display=15, show=False)
-    plt.title("Global feature importance (mean |SHAP value|)")
-    plt.tight_layout()
-    plt.savefig(bar_path, dpi=160, bbox_inches="tight")
-    plt.close()
+    figure, axes = plt.subplots(figsize=(10, 6))
+    shap_lib.plots.bar(explanation, max_display=15, show=False, ax=axes)
+    axes.set_title("Global feature importance (mean |SHAP value|)")
+    figure.tight_layout()
+    figure.savefig(bar_path, dpi=160, bbox_inches="tight")
+    plt.close(figure)
 
     beeswarm_path = REPORTS_DIR / "shap_beeswarm.png"
-    plt.figure()
-    shap_lib.plots.beeswarm(explanation, max_display=15, show=False)
-    plt.title("SHAP value distribution per feature")
-    plt.tight_layout()
-    plt.savefig(beeswarm_path, dpi=160, bbox_inches="tight")
-    plt.close()
+    figure, axes = plt.subplots(figsize=(10, 7))
+    shap_lib.plots.beeswarm(explanation, max_display=15, show=False, ax=axes)
+    axes.set_title("SHAP value distribution per feature")
+    figure.tight_layout()
+    figure.savefig(beeswarm_path, dpi=160, bbox_inches="tight")
+    plt.close(figure)
 
     probabilities = pipeline.predict_proba(sample)[:, 1]
     highest_risk = int(np.argmax(probabilities))
     waterfall_path = REPORTS_DIR / "shap_waterfall_high_risk.png"
-    plt.figure()
-    shap_lib.plots.waterfall(explanation[highest_risk], max_display=12, show=False)
-    plt.title(f"Why this customer is high risk (p={probabilities[highest_risk]:.3f})")
-    plt.tight_layout()
-    plt.savefig(waterfall_path, dpi=160, bbox_inches="tight")
-    plt.close()
+    figure, axes = plt.subplots(figsize=(10, 6))
+    shap_lib.plots.waterfall(explanation[highest_risk], max_display=12, show=False, ax=axes)
+    axes.set_title(f"Why this customer is high risk (p={probabilities[highest_risk]:.3f})")
+    figure.tight_layout()
+    figure.savefig(waterfall_path, dpi=160, bbox_inches="tight")
+    plt.close(figure)
 
     importance = global_importance(values, transformed_names, raw_names)
     print(f"   SHAP plots written to {REPORTS_DIR}")
