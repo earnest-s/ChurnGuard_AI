@@ -189,6 +189,41 @@ def feature_defaults(features: pd.DataFrame, numeric: list[str]) -> dict[str, An
     return defaults
 
 
+def reference_profile(
+    pipeline: Pipeline,
+    features: pd.DataFrame,
+    target: pd.Series,
+    numeric: list[str],
+) -> dict[str, Any]:
+    """Pick a real training customer as the fallback profile for unspecified fields.
+
+    A per-column median/mode profile is *jointly* unrealistic: the mode of
+    ``Contract`` is month-to-month, of ``InternetService`` fiber and of
+    ``PaymentMethod`` electronic check, so combining them describes a
+    high-risk archetype rather than an average customer (predicted churn ~0.40
+    vs a 0.27 base rate). Using one observed row keeps every "No internet
+    service" / "No phone service" dependency consistent as well.
+
+    The chosen row is the observed customer whose predicted risk is closest to
+    the portfolio churn base rate, which makes the fallback easy to explain:
+    "the typical customer, plus whatever the caller specified".
+    """
+    probabilities = pipeline.predict_proba(features)[:, 1]
+    base_rate = float(target.mean())
+    index = int(np.argmin(np.abs(probabilities - base_rate)))
+    row = features.iloc[index]
+    values = {
+        column: (round(float(row[column]), 4) if column in numeric else str(row[column]))
+        for column in features.columns
+    }
+    return {
+        "source": "observed training customer whose predicted risk is closest to the churn base rate",
+        "base_rate": round(base_rate, 4),
+        "predicted_probability": round(float(probabilities[index]), 4),
+        "values": values,
+    }
+
+
 def training_statistics(features: pd.DataFrame, numeric: list[str]) -> dict[str, dict[str, float]]:
     """Mean / std of the numeric features, used by the drift detector."""
     stats: dict[str, dict[str, float]] = {}
@@ -869,6 +904,7 @@ def train(args: argparse.Namespace) -> int:
         "categorical_features": categorical,
         "raw_features": numeric + categorical,
         "feature_defaults": feature_defaults(X_train, numeric),
+        "reference_profile": reference_profile(deployed, X_train, y_train, numeric),
         "training_stats": training_statistics(X_train, numeric),
         "top_features": shap_result.get("global", []),
         "xai": {

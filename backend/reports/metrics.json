@@ -1,0 +1,360 @@
+{
+  "trained_at": "2026-10-26T16:24:34+00:00",
+  "model_name": "LogisticRegression",
+  "engine": "pycaret",
+  "selection": "tuned ({'model__C': 10.0}) - validation F1 0.5642",
+  "validation": {
+    "split_size": 0.2,
+    "untuned_f1": 0.5606,
+    "tuned_f1": 0.5642,
+    "best_params": {
+      "model__C": "10.0"
+    }
+  },
+  "dataset": {
+    "source": "cache:telco_churn.csv",
+    "rows": 7032,
+    "features": 19,
+    "churn_rate": 0.2658
+  },
+  "split": {
+    "test_size": 0.2,
+    "random_state": 42,
+    "stratified": true
+  },
+  "metrics": {
+    "baseline": {
+      "cv_f1_mean": 0.596,
+      "cv_f1_std": 0.0224,
+      "f1": 0.6099,
+      "precision": 0.6495,
+      "recall": 0.5749,
+      "roc_auc": 0.8359,
+      "accuracy": 0.8045
+    },
+    "automl": {
+      "cv_f1_mean": 0.5951,
+      "cv_f1_std": 0.0216,
+      "pycaret_holdout_f1": 0.6071,
+      "f1": 0.6054,
+      "precision": 0.6426,
+      "recall": 0.5722,
+      "roc_auc": 0.8353,
+      "accuracy": 0.8017
+    },
+    "f1_improvement_over_baseline": -0.0045
+  },
+  "comparison": [
+    {
+      "model": "Baseline LogisticRegression",
+      "cv_f1_mean": 0.596,
+      "holdout_f1": 0.6099,
+      "precision": 0.6495,
+      "recall": 0.5749,
+      "roc_auc": 0.8359
+    },
+    {
+      "model": "AutoML winner (LogisticRegression)",
+      "cv_f1_mean": 0.5951,
+      "holdout_f1": 0.6054,
+      "precision": 0.6426,
+      "recall": 0.5722,
+      "roc_auc": 0.8353
+    }
+  ],
+  "automl_leaderboard": [
+    {
+      "model": "Logistic Regression",
+      "accuracy": 0.8027,
+      "auc": 0.8468,
+      "recall": 0.5485,
+      "precision": 0.6534,
+      "f1": 0.5964,
+      "kappa": 0.4671,
+      "mcc": 0.4702,
+      "tt_sec": 0.7567
+    },
+    {
+      "model": "Gradient Boosting Classifier",
+      "accuracy": 0.8009,
+      "auc": 0.8453,
+      "recall": 0.5358,
+      "precision": 0.653,
+      "f1": 0.5886,
+      "kappa": 0.4589,
+      "mcc": 0.4629,
+      "tt_sec": 0.83
+    },
+    {
+      "model": "Random Forest Classifier",
+      "accuracy": 0.7899,
+      "auc": 0.8282,
+      "recall": 0.499,
+      "precision": 0.6329,
+      "f1": 0.558,
+      "kappa": 0.4227,
+      "mcc": 0.4278,
+      "tt_sec": 0.7567
+    },
+    {
+      "model": "Extra Trees Classifier",
+      "accuracy": 0.7815,
+      "auc": 0.8045,
+      "recall": 0.495,
+      "precision": 0.61,
+      "f1": 0.5465,
+      "kappa": 0.4046,
+      "mcc": 0.4084,
+      "tt_sec": 0.7267
+    },
+    {
+      "model": "Decision Tree Classifier",
+      "accuracy": 0.7301,
+      "auc": 0.6637,
+      "recall": 0.5217,
+      "precision": 0.493,
+      "f1": 0.5068,
+      "kappa": 0.3213,
+      "mcc": 0.3217,
+      "tt_sec": 0.69
+    }
+  ],
+  "numeric_features": [
+    "tenure",
+    "MonthlyCharges",
+    "TotalCharges"
+  ],
+  "categorical_features": [
+    "gender",
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod"
+  ],
+  "raw_features": [
+    "tenure",
+    "MonthlyCharges",
+    "TotalCharges",
+    "gender",
+    "SeniorCitizen",
+    "Partner",
+    "Dependents",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod"
+  ],
+  "feature_defaults": {
+    "gender": "Male",
+    "SeniorCitizen": "0",
+    "Partner": "No",
+    "Dependents": "No",
+    "tenure": 29.0,
+    "PhoneService": "Yes",
+    "MultipleLines": "No",
+    "InternetService": "Fiber optic",
+    "OnlineSecurity": "No",
+    "OnlineBackup": "No",
+    "DeviceProtection": "No",
+    "TechSupport": "No",
+    "StreamingTV": "No",
+    "StreamingMovies": "No",
+    "Contract": "Month-to-month",
+    "PaperlessBilling": "Yes",
+    "PaymentMethod": "Electronic check",
+    "MonthlyCharges": 70.6,
+    "TotalCharges": 1410.25
+  },
+  "training_stats": {
+    "tenure": {
+      "mean": 32.5623,
+      "std": 24.5402
+    },
+    "MonthlyCharges": {
+      "mean": 64.9993,
+      "std": 30.106
+    },
+    "TotalCharges": {
+      "mean": 2301.8395,
+      "std": 2275.3838
+    }
+  },
+  "top_features": [
+    {
+      "feature": "MonthlyCharges",
+      "importance": 0.179
+    },
+    {
+      "feature": "tenure",
+      "importance": 0.1561
+    },
+    {
+      "feature": "InternetService",
+      "importance": 0.1242
+    },
+    {
+      "feature": "Contract",
+      "importance": 0.0729
+    },
+    {
+      "feature": "TotalCharges",
+      "importance": 0.0693
+    },
+    {
+      "feature": "StreamingTV",
+      "importance": 0.0549
+    },
+    {
+      "feature": "StreamingMovies",
+      "importance": 0.0536
+    },
+    {
+      "feature": "MultipleLines",
+      "importance": 0.0383
+    },
+    {
+      "feature": "SeniorCitizen",
+      "importance": 0.034
+    },
+    {
+      "feature": "DeviceProtection",
+      "importance": 0.0289
+    },
+    {
+      "feature": "gender",
+      "importance": 0.0245
+    },
+    {
+      "feature": "OnlineSecurity",
+      "importance": 0.0244
+    },
+    {
+      "feature": "Partner",
+      "importance": 0.0244
+    },
+    {
+      "feature": "TechSupport",
+      "importance": 0.0243
+    },
+    {
+      "feature": "OnlineBackup",
+      "importance": 0.0221
+    },
+    {
+      "feature": "PaymentMethod",
+      "importance": 0.022
+    },
+    {
+      "feature": "PaperlessBilling",
+      "importance": 0.0204
+    },
+    {
+      "feature": "Dependents",
+      "importance": 0.02
+    },
+    {
+      "feature": "PhoneService",
+      "importance": 0.0066
+    }
+  ],
+  "xai": {
+    "available": true,
+    "method": "LinearExplainer",
+    "plots": [
+      "shap_summary_bar.png",
+      "shap_beeswarm.png",
+      "shap_waterfall_high_risk.png"
+    ]
+  },
+  "leakage_checks": [
+    {
+      "check": "Identifier removed",
+      "detail": "customerID dropped; it is unique per row and carries no predictive signal.",
+      "status": "pass"
+    },
+    {
+      "check": "Target not present in features",
+      "detail": "0 target-derived column(s) found.",
+      "status": "pass"
+    },
+    {
+      "check": "Derived-feature redundancy",
+      "detail": "corr(tenure x MonthlyCharges, TotalCharges) = 1.000. TotalCharges is near-duplicate information, but it is known at prediction time, so it is redundancy rather than target leakage.",
+      "status": "review"
+    },
+    {
+      "check": "Duplicate rows",
+      "detail": "22 duplicated row(s) in the cleaned dataset.",
+      "status": "review"
+    },
+    {
+      "check": "Fit/transform isolation",
+      "detail": "Imputation, scaling and one-hot encoding live inside the pipeline, so they are refitted on every CV training fold and never see the holdout rows.",
+      "status": "pass"
+    },
+    {
+      "check": "Class balance",
+      "detail": "churn rate = 0.266 (1869 churn / 5163 retained), handled with stratified splits and F1 as the primary metric.",
+      "status": "pass"
+    }
+  ],
+  "fairness": [
+    {
+      "feature": "gender",
+      "group": "Female",
+      "n": 681,
+      "churn_rate": 0.2746,
+      "precision": 0.6265,
+      "recall": 0.5561
+    },
+    {
+      "feature": "gender",
+      "group": "Male",
+      "n": 726,
+      "churn_rate": 0.2576,
+      "precision": 0.6587,
+      "recall": 0.5882
+    },
+    {
+      "feature": "SeniorCitizen",
+      "group": "0",
+      "n": 1175,
+      "churn_rate": 0.2366,
+      "precision": 0.641,
+      "recall": 0.5396
+    },
+    {
+      "feature": "SeniorCitizen",
+      "group": "1",
+      "n": 232,
+      "churn_rate": 0.4138,
+      "precision": 0.6465,
+      "recall": 0.6667
+    }
+  ],
+  "versions": {
+    "python": "3.11.15",
+    "scikit_learn": "1.4.2",
+    "pandas": "2.1.4",
+    "numpy": "1.26.4"
+  }
+}

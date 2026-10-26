@@ -72,6 +72,30 @@ def test_predict_accepts_optional_telco_fields(client: TestClient) -> None:
     assert client.post("/predict", json=payload).status_code == 200
 
 
+def test_predict_accepts_every_telco_field(client: TestClient) -> None:
+    payload = {
+        **VALID_PAYLOAD,
+        "contract": "One year",
+        "total_charges": 850.0,
+        "gender": "Female",
+        "senior_citizen": True,
+        "partner": "Yes",
+        "dependents": "No",
+        "phone_service": "Yes",
+        "multiple_lines": "Yes",
+        "internet_service": "Fiber optic",
+        "online_security": "No",
+        "online_backup": "Yes",
+        "device_protection": "No",
+        "tech_support": "Yes",
+        "streaming_tv": "No",
+        "streaming_movies": "Yes",
+        "paperless_billing": "No",
+        "payment_method": "Credit card (automatic)",
+    }
+    assert client.post("/predict", json=payload).status_code == 200
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -81,6 +105,8 @@ def test_predict_accepts_optional_telco_fields(client: TestClient) -> None:
         {**VALID_PAYLOAD, "support_calls": -2},
         {**VALID_PAYLOAD, "contract": "Weekly"},
         {**VALID_PAYLOAD, "internet_service": "Carrier pigeon"},
+        {**VALID_PAYLOAD, "tech_support": "Maybe"},
+        {**VALID_PAYLOAD, "senior_citizen": "perhaps"},
     ],
 )
 def test_predict_validates_input(client: TestClient, payload: dict) -> None:
@@ -163,7 +189,7 @@ def _sample_frame() -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def _write_artifacts(directory) -> None:
+def _write_artifacts(directory) -> tuple[pd.DataFrame, pd.Series, object, dict]:
     frame, _ = train.clean_dataset(_sample_frame())
     features, target, numeric, categorical = train.split_features(frame)
 
@@ -182,6 +208,7 @@ def _write_artifacts(directory) -> None:
         "numeric_features": numeric,
         "categorical_features": categorical,
         "feature_defaults": train.feature_defaults(features, numeric),
+        "reference_profile": train.reference_profile(pipeline, features, target, numeric),
         "training_stats": train.training_statistics(features, numeric),
         "top_features": [{"feature": "tenure", "importance": 0.5}],
         "metrics": {"automl": {"f1": 0.8}},
@@ -189,6 +216,7 @@ def _write_artifacts(directory) -> None:
         "fairness": [],
     }
     (directory / "model_metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    return features, target, pipeline, metadata
 
 
 def test_automl_artifact_serves_shap_explanations(tmp_path, monkeypatch) -> None:
@@ -224,8 +252,94 @@ def test_automl_artifact_serves_shap_explanations(tmp_path, monkeypatch) -> None
     assert set(body["feature_importance"]) <= set(
         reloaded.app.state.metadata["raw_features"]
     )
+    # Unspecified inputs are reported back so the caller knows what was assumed.
+    assert set(body["assumed_features"]) == {"TotalCharges", "PaymentMethod"}
 
     with TestClient(reloaded.app) as client:
         retrain = client.post("/retrain")
     assert retrain.status_code == 409
     assert "train.py" in retrain.json()["error"]
+
+
+# ---------------------------------------------------------------------------
+# Serving-path guarantees: defaults, coherence, exact rebuilds
+# ---------------------------------------------------------------------------
+def test_profile_coherence_helper() -> None:
+    without_internet = {
+        "InternetService": "No",
+        "PhoneService": "No",
+        "OnlineSecurity": "Yes",
+        "StreamingTV": "No",
+        "MultipleLines": "Yes",
+    }
+    api._enforce_profile_coherence(without_internet)
+    assert without_internet["OnlineSecurity"] == "No internet service"
+    assert without_internet["StreamingTV"] == "No internet service"
+    assert without_internet["MultipleLines"] == "No phone service"
+
+    with_internet = {
+        "InternetService": "DSL",
+        "PhoneService": "Yes",
+        "OnlineSecurity": "No internet service",
+        "MultipleLines": "No phone service",
+    }
+    api._enforce_profile_coherence(with_internet)
+    assert with_internet["OnlineSecurity"] == "No"
+    assert with_internet["MultipleLines"] == "No"
+
+
+def test_reference_profile_tracks_the_base_rate() -> None:
+    """With a graded model, the reference row lands on the portfolio churn rate."""
+    frame, _ = train.clean_dataset(_sample_frame())
+    features, target, numeric, categorical = train.split_features(frame)
+    pipeline = train.build_pipeline(
+        LogisticRegression(max_iter=1000, random_state=42), numeric, categorical
+    )
+    pipeline.fit(features, target)
+
+    profile = train.reference_profile(pipeline, features, target, numeric)
+    assert profile["base_rate"] == pytest.approx(float(target.mean()), abs=1e-4)
+    assert abs(profile["predicted_probability"] - profile["base_rate"]) < 0.05
+    assert set(profile["values"]) == set(features.columns)
+    assert isinstance(profile["values"]["tenure"], float)
+    assert profile["values"]["Contract"] in {"Month-to-month", "One year", "Two year"}
+
+
+def test_feature_row_falls_back_to_the_reference_profile(tmp_path) -> None:
+    output = _write_artifacts(tmp_path / "models")
+    features, _, _, metadata = output
+    reference = metadata["reference_profile"]["values"]
+
+    payload = api.ChurnRequest(tenure=5, monthly_charges=60.0, contract_type=1)
+    row, assumed = api._feature_row(payload, metadata)
+
+    assert row["Contract"].iloc[0] == "One year"
+    assert row["tenure"].iloc[0] == pytest.approx(5.0)
+    assert row["TotalCharges"].iloc[0] == pytest.approx(300.0)  # derived, not assumed
+    for column in ("Partner", "PaperlessBilling", "PaymentMethod"):
+        if column in features.columns:
+            assert row[column].iloc[0] == reference[column]
+    expected_assumed = set(features.columns) - {"tenure", "MonthlyCharges", "Contract"}
+    assert set(assumed) == expected_assumed
+
+
+def test_feature_row_rebuilds_an_observed_row_exactly(tmp_path) -> None:
+    features, _, pipeline, metadata = _write_artifacts(tmp_path / "models")
+    contract_codes = {"Month-to-month": 0, "One year": 1, "Two year": 2}
+    original = features.iloc[[4]]
+
+    payload = api.ChurnRequest(
+        tenure=float(original["tenure"].iloc[0]),
+        monthly_charges=float(original["MonthlyCharges"].iloc[0]),
+        contract_type=contract_codes[original["Contract"].iloc[0]],
+        total_charges=float(original["TotalCharges"].iloc[0]),
+        internet_service=original["InternetService"].iloc[0],
+        payment_method=original["PaymentMethod"].iloc[0],
+    )
+    rebuilt, assumed = api._feature_row(payload, metadata)
+
+    assert assumed == {}
+    assert rebuilt.iloc[0].astype(str).to_dict() == original.iloc[0].astype(str).to_dict()
+    assert pipeline.predict_proba(rebuilt)[0, 1] == pytest.approx(
+        pipeline.predict_proba(original)[0, 1]
+    )

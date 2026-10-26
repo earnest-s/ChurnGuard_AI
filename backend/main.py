@@ -65,6 +65,15 @@ LEGACY_FEATURES: tuple[str, str, str, str] = (
 )
 DRIFT_THRESHOLD: float = 2.0
 CONTRACT_BY_CODE: dict[int, str] = {0: "Month-to-month", 1: "One year", 2: "Two year"}
+#: These services only exist when the customer has internet / phone service.
+INTERNET_DEPENDENT_FEATURES: tuple[str, ...] = (
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+)
 #: Metadata uses the original Telco column names; the API uses snake_case.
 DRIFT_FEATURE_ALIASES: dict[str, str] = {
     "tenure": "tenure",
@@ -76,9 +85,11 @@ DRIFT_FEATURE_ALIASES: dict[str, str] = {
 class ChurnRequest(BaseModel):
     """Input for a single prediction.
 
-    ``tenure`` / ``monthly_charges`` / ``contract_type`` are the original
-    fields used by the frontend. ``contract`` / ``internet_service`` /
-    ``payment_method`` are optional and override the model's default profile.
+    ``tenure`` / ``monthly_charges`` / ``contract_type`` / ``support_calls`` are
+    the original frontend fields and are always required. Every other Telco
+    column is optional: whatever the caller leaves out is filled from the
+    model's *reference profile* (a real training customer at the portfolio
+    churn rate) and reported back in ``assumed_features``.
     """
 
     tenure: float
@@ -94,6 +105,19 @@ class ChurnRequest(BaseModel):
         "Electronic check",
         "Mailed check",
     ] | None = None
+    gender: Literal["Female", "Male"] | None = None
+    senior_citizen: bool | None = None
+    partner: Literal["Yes", "No"] | None = None
+    dependents: Literal["Yes", "No"] | None = None
+    phone_service: Literal["Yes", "No"] | None = None
+    multiple_lines: Literal["Yes", "No", "No phone service"] | None = None
+    online_security: Literal["Yes", "No", "No internet service"] | None = None
+    online_backup: Literal["Yes", "No", "No internet service"] | None = None
+    device_protection: Literal["Yes", "No", "No internet service"] | None = None
+    tech_support: Literal["Yes", "No", "No internet service"] | None = None
+    streaming_tv: Literal["Yes", "No", "No internet service"] | None = None
+    streaming_movies: Literal["Yes", "No", "No internet service"] | None = None
+    paperless_billing: Literal["Yes", "No"] | None = None
 
     @field_validator("tenure")
     @classmethod
@@ -147,6 +171,10 @@ class ChurnResponse(BaseModel):
     explanation: str
     model_name: str
     xai_method: str
+    assumed_features: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Raw model inputs the caller did not supply, filled from the reference profile.",
+    )
 
 
 class DriftStatusResponse(BaseModel):
@@ -257,31 +285,107 @@ def _ensure_storage_paths() -> None:
 # ---------------------------------------------------------------------------
 def _total_charges(payload: ChurnRequest) -> float:
     if payload.total_charges is not None:
-        return payload.total_charges
+        return float(payload.total_charges)
     # Telco's TotalCharges is (almost exactly) tenure x MonthlyCharges.
-    return round(payload.tenure * payload.monthly_charges, 2)
+    return round(float(payload.tenure) * float(payload.monthly_charges), 2)
 
 
-def _feature_row(payload: ChurnRequest, metadata: dict[str, Any]) -> pd.DataFrame:
-    """Start from the training-data default profile and override what we know."""
-    row: dict[str, Any] = dict(metadata.get("feature_defaults") or {})
-    row["tenure"] = payload.tenure
-    row["MonthlyCharges"] = payload.monthly_charges
+def _supplied_features(payload: ChurnRequest) -> dict[str, Any]:
+    """Raw column -> value for every model input the caller actually sent."""
+    supplied: dict[str, Any] = {
+        "tenure": float(payload.tenure),
+        "MonthlyCharges": float(payload.monthly_charges),
+        "Contract": payload.contract or CONTRACT_BY_CODE[payload.contract_type],
+    }
+    if payload.total_charges is not None:
+        supplied["TotalCharges"] = float(payload.total_charges)
+
+    optional: dict[str, Any] = {
+        "gender": payload.gender,
+        "SeniorCitizen": (
+            None if payload.senior_citizen is None else ("1" if payload.senior_citizen else "0")
+        ),
+        "Partner": payload.partner,
+        "Dependents": payload.dependents,
+        "PhoneService": payload.phone_service,
+        "MultipleLines": payload.multiple_lines,
+        "InternetService": payload.internet_service,
+        "OnlineSecurity": payload.online_security,
+        "OnlineBackup": payload.online_backup,
+        "DeviceProtection": payload.device_protection,
+        "TechSupport": payload.tech_support,
+        "StreamingTV": payload.streaming_tv,
+        "StreamingMovies": payload.streaming_movies,
+        "PaperlessBilling": payload.paperless_billing,
+        "PaymentMethod": payload.payment_method,
+    }
+    supplied.update({column: value for column, value in optional.items() if value is not None})
+    return supplied
+
+
+def _enforce_profile_coherence(row: dict[str, Any]) -> None:
+    """Keep dependent services consistent with the parent service.
+
+    The Telco data only contains ``No internet service`` when
+    ``InternetService == "No"`` and ``No phone service`` when
+    ``PhoneService == "No"``. A caller (or a stale default) can otherwise
+    assemble a combination that never occurs, which the model would treat as an
+    unseen category.
+    """
+    internet = str(row.get("InternetService", ""))
+    for column in INTERNET_DEPENDENT_FEATURES:
+        if column not in row:
+            continue
+        if internet == "No":
+            row[column] = "No internet service"
+        elif str(row[column]) == "No internet service":
+            row[column] = "No"
+
+    if "MultipleLines" in row:
+        if str(row.get("PhoneService", "")) == "No":
+            row["MultipleLines"] = "No phone service"
+        elif str(row["MultipleLines"]) == "No phone service":
+            row["MultipleLines"] = "No"
+
+
+def _feature_row(
+    payload: ChurnRequest, metadata: dict[str, Any]
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Build one model row from the reference profile plus the caller's values.
+
+    Returns the DataFrame *and* the raw features that were assumed, so the API
+    can tell the caller exactly which inputs the explanation is conditioned on.
+    """
+    reference: dict[str, Any] = (
+        (metadata.get("reference_profile") or {}).get("values")
+        or metadata.get("feature_defaults")
+        or {}
+    )
+    raw_features = list(metadata.get("raw_features") or reference.keys())
+    if not raw_features:
+        raise ValueError("Model metadata does not list the raw feature columns.")
+
+    missing = [column for column in raw_features if column not in reference]
+    if missing:
+        raise ValueError(f"No reference value available for: {', '.join(missing)}")
+
+    supplied = _supplied_features(payload)
+    row: dict[str, Any] = {column: reference[column] for column in raw_features}
+    row.update(supplied)
     if "TotalCharges" in row:
         row["TotalCharges"] = _total_charges(payload)
-    if "Contract" in row:
-        row["Contract"] = payload.contract or CONTRACT_BY_CODE[payload.contract_type]
-    if payload.internet_service and "InternetService" in row:
-        row["InternetService"] = payload.internet_service
-    if payload.payment_method and "PaymentMethod" in row:
-        row["PaymentMethod"] = payload.payment_method
+    _enforce_profile_coherence(row)
 
+    # Training cast every categorical column to str; mirror that exactly here.
     for column in metadata.get("categorical_features", []):
         if column in row:
             row[column] = str(row[column])
+    for column in metadata.get("numeric_features", []):
+        if column in row:
+            row[column] = float(row[column])
 
-    columns = list(metadata.get("raw_features") or row.keys())
-    return pd.DataFrame([row], columns=columns)
+    assumed = {column: row[column] for column in raw_features if column not in supplied}
+    return pd.DataFrame([row], columns=raw_features), assumed
 
 
 def _drift_values(payload: ChurnRequest) -> dict[str, float]:
@@ -514,12 +618,13 @@ def predict(payload: ChurnRequest):
 
         if app.state.kind == "automl":
             metadata = app.state.metadata
-            row = _feature_row(payload, metadata)
+            row, assumed = _feature_row(payload, metadata)
             probability = float(app.state.pipeline.predict_proba(row)[0][1])
             importance, factors, method = _explain_automl(
                 app.state.pipeline, app.state.explainer, row, metadata
             )
         else:
+            assumed = {}
             model = app.state.model
             if model is None:
                 return JSONResponse(
@@ -564,6 +669,7 @@ def predict(payload: ChurnRequest):
             explanation=explanation,
             model_name=app.state.model_name,
             xai_method=method,
+            assumed_features=assumed,
         )
     except Exception as exc:
         logger.exception("Prediction error")
@@ -587,6 +693,8 @@ def model_info() -> dict[str, Any]:
         "dataset": metadata.get("dataset"),
         "metrics": metadata.get("metrics"),
         "top_features": metadata.get("top_features"),
+        "reference_profile": metadata.get("reference_profile"),
+        "feature_defaults": metadata.get("feature_defaults"),
         "leakage_checks": metadata.get("leakage_checks"),
         "fairness": metadata.get("fairness"),
         "versions": metadata.get("versions"),
