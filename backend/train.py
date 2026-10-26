@@ -796,8 +796,8 @@ def train(args: argparse.Namespace) -> int:
         "numeric_features": numeric,
         "categorical_features": categorical,
         "raw_features": numeric + categorical,
-        "feature_defaults": feature_defaults(features, numeric),
-        "training_stats": training_statistics(features, numeric),
+        "feature_defaults": feature_defaults(X_train, numeric),
+        "training_stats": training_statistics(X_train, numeric),
         "top_features": shap_result.get("global", []),
         "xai": {
             "available": bool(shap_result.get("available")),

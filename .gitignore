@@ -3,8 +3,15 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
 
-# Model artifact
+# Model artifact (legacy)
 backend/churn_model.joblib
 
 # Node

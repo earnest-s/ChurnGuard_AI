@@ -78,7 +78,14 @@ export default function App() {
         throw new Error('Invalid prediction response schema')
       }
 
-      setResult({ probability, label, importance })
+      setResult({
+        probability,
+        label,
+        importance,
+        explanation: typeof data.explanation === 'string' ? data.explanation : '',
+        modelName: typeof data.model_name === 'string' ? data.model_name : '',
+        xaiMethod: typeof data.xai_method === 'string' ? data.xai_method : '',
+      })
     } catch (err) {
       setError(err.message || 'Something went wrong while predicting churn.')
     } finally {
@@ -125,6 +132,8 @@ export default function App() {
 
   const featureEntries = result?.importance
     ? Object.entries(result.importance)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
     : []
 
   const topFeature = featureEntries.reduce(
@@ -188,7 +197,7 @@ export default function App() {
           </label>
 
           <label>
-            <span>Support Calls</span>
+            <span>Support Calls (legacy model only)</span>
             <input
               type="number"
               name="support_calls"
@@ -217,7 +226,7 @@ export default function App() {
             </article>
 
             <section className="insights">
-              <h3>Model Insights</h3>
+              <h3>Model Insights{result.xaiMethod === 'shap' ? ' (SHAP)' : ''}</h3>
               <p className="insight-subtitle">
                 Most influential feature: <strong>{toLabel(topFeature[0])}</strong>
               </p>
@@ -242,6 +251,14 @@ export default function App() {
                   )
                 })}
               </div>
+
+              {result.explanation && <p className="explanation">{result.explanation}</p>}
+              {result.modelName && (
+                <p className="model-meta">
+                  Model: <strong>{result.modelName}</strong>
+                  {result.xaiMethod ? ` · explanation: ${result.xaiMethod}` : ''}
+                </p>
+              )}
             </section>
           </>
         )}

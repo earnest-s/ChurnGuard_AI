@@ -203,6 +203,21 @@ button:disabled {
   background: linear-gradient(90deg, #146c43, #4ca572);
 }
 
+.explanation {
+  margin: 14px 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.model-meta {
+  margin: 8px 0 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .ops-panel {
   margin-top: 16px;
   padding: 14px;

@@ -13,7 +13,8 @@
 pycaret==3.3.2
 
 # Report plots (SHAP bar / beeswarm / waterfall).
-matplotlib==3.8.2
+# PyCaret 3.3.2 pins matplotlib<3.8, hence 3.7.5 here (not 3.8.2).
+matplotlib==3.7.5
 
 # Optional extra AutoML candidate:
 #   python train.py --allow-extra-estimators
