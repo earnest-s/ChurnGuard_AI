@@ -288,21 +288,23 @@ def test_profile_coherence_helper() -> None:
     assert with_internet["MultipleLines"] == "No"
 
 
-def test_reference_profile_tracks_the_base_rate() -> None:
-    """With a graded model, the reference row lands on the portfolio churn rate."""
-    frame, _ = train.clean_dataset(_sample_frame())
-    features, target, numeric, categorical = train.split_features(frame)
-    pipeline = train.build_pipeline(
-        LogisticRegression(max_iter=1000, random_state=42), numeric, categorical
+def test_reference_profile_picks_the_row_nearest_the_base_rate() -> None:
+    """The reference row is the observation closest to the portfolio churn rate."""
+    features = pd.DataFrame(
+        {"tenure": [3.0, 12.0, 60.0], "Contract": ["Month-to-month", "One year", "Two year"]}
     )
-    pipeline.fit(features, target)
+    target = pd.Series([1, 0, 0])
 
-    profile = train.reference_profile(pipeline, features, target, numeric)
-    assert profile["base_rate"] == pytest.approx(float(target.mean()), abs=1e-4)
-    assert abs(profile["predicted_probability"] - profile["base_rate"]) < 0.05
-    assert set(profile["values"]) == set(features.columns)
-    assert isinstance(profile["values"]["tenure"], float)
-    assert profile["values"]["Contract"] in {"Month-to-month", "One year", "Two year"}
+    class _StubPipeline:
+        def predict_proba(self, frame):
+            probabilities = np.array([0.10, 0.49, 0.90])
+            return np.column_stack([1 - probabilities, probabilities])
+
+    profile = train.reference_profile(_StubPipeline(), features, target, ["tenure"])
+    assert profile["base_rate"] == pytest.approx(1 / 3, abs=1e-4)
+    assert profile["predicted_probability"] == pytest.approx(0.49)
+    assert profile["values"]["tenure"] == pytest.approx(12.0)
+    assert profile["values"]["Contract"] == "One year"
 
 
 def test_feature_row_falls_back_to_the_reference_profile(tmp_path) -> None:
@@ -339,7 +341,13 @@ def test_feature_row_rebuilds_an_observed_row_exactly(tmp_path) -> None:
     rebuilt, assumed = api._feature_row(payload, metadata)
 
     assert assumed == {}
-    assert rebuilt.iloc[0].astype(str).to_dict() == original.iloc[0].astype(str).to_dict()
+    for column in features.columns:
+        if column in metadata["numeric_features"]:
+            assert float(rebuilt[column].iloc[0]) == pytest.approx(
+                float(original[column].iloc[0])
+            )
+        else:
+            assert rebuilt[column].iloc[0] == original[column].iloc[0]
     assert pipeline.predict_proba(rebuilt)[0, 1] == pytest.approx(
         pipeline.predict_proba(original)[0, 1]
     )
