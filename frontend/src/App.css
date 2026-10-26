@@ -218,6 +218,76 @@ button:disabled {
   color: var(--muted);
 }
 
+.advanced {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(16, 35, 31, 0.14);
+  border-radius: 12px;
+  background: #fbfdf9;
+}
+
+.advanced summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.advanced-hint {
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.advanced-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.assumed {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px dashed rgba(16, 35, 31, 0.25);
+  background: #f7faf6;
+}
+
+.assumed-title {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.assumed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.assumed-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.assumed-list strong {
+  color: var(--text);
+  text-align: right;
+}
+
+.assumed-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
 .ops-panel {
   margin-top: 16px;
   padding: 14px;

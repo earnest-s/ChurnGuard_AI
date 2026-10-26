@@ -87,7 +87,7 @@ The script prints, in order:
 | Artifact | Purpose |
 | --- | --- |
 | `backend/models/churn_pipeline.joblib` | Portable scikit-learn pipeline served by the API (no PyCaret at runtime). |
-| `backend/models/model_metadata.json` | Model card: metrics, feature defaults, training statistics, global SHAP importance, leakage checks, fairness slices. |
+| `backend/models/model_metadata.json` | Model card: metrics, reference profile, training statistics, global SHAP importance, leakage checks, fairness slices. |
 | `backend/reports/shap_summary_bar.png` | Global feature importance (report figure). |
 | `backend/reports/shap_beeswarm.png` | Effect direction and spread per feature. |
 | `backend/reports/shap_waterfall_high_risk.png` | Single-customer explanation. |
@@ -111,7 +111,8 @@ than an image with the full AutoML stack.
 | `GET` | `/drift-status` | Whether recent requests drifted from the training distribution. |
 | `POST` | `/retrain` | Online retrain from the prediction log (fallback model only). |
 
-Request (only `tenure`, `monthly_charges` and `contract_type` are required):
+Request (only `tenure`, `monthly_charges`, `contract_type` and `support_calls` are
+required; `support_calls` is the legacy frontend field):
 
 ```json
 {
@@ -120,16 +121,31 @@ Request (only `tenure`, `monthly_charges` and `contract_type` are required):
   "contract_type": 0,
   "contract": "Month-to-month",
   "internet_service": "Fiber optic",
-  "payment_method": "Electronic check"
+  "payment_method": "Electronic check",
+  "paperless_billing": "Yes",
+  "tech_support": "No"
 }
 ```
 
 `contract_type` maps to `Contract` (`0 → Month-to-month`, `1 → One year`,
-`2 → Two year`). Fields you omit are filled from the training-data default profile
-(median / mode), so the model always receives a complete, valid row.
-`total_charges` is derived as `tenure × monthly_charges` when not supplied.
-`support_calls` is accepted for backwards compatibility but is not part of the Telco
-dataset, so the AutoML model ignores it.
+`2 → Two year`). Every other Telco column (`gender`, `senior_citizen`, `partner`,
+`dependents`, `phone_service`, `multiple_lines`, `internet_service`,
+`online_security`, `online_backup`, `device_protection`, `tech_support`,
+`streaming_tv`, `streaming_movies`, `paperless_billing`, `payment_method`) is
+optional and type-checked against the exact categories seen in training.
+
+Omitted fields are filled from the model's **reference profile**: a real training
+customer whose predicted risk matches the portfolio churn rate (≈0.27), not a
+per-column median/mode blend. That matters because the per-column modes jointly
+describe a high-risk archetype (month-to-month + fiber + electronic check, ≈0.40),
+which would silently inflate every sparse request. The response echoes the filled
+values in `assumed_features`, so the UI can show exactly which inputs the
+explanation is conditioned on.
+
+`total_charges` is derived as `tenure × monthly_charges` when not supplied, and
+`No internet service` / `No phone service` values are kept consistent with the
+parent service. `support_calls` is accepted for backwards compatibility but is not
+part of the Telco dataset, so the AutoML model ignores it.
 
 Response:
 
@@ -144,13 +160,15 @@ Response:
     { "feature": "MonthlyCharges", "contribution": 0.21 }
   ],
   "explanation": "SHAP drivers for this customer: Contract (+0.830), tenure (-0.450), MonthlyCharges (+0.210). Positive values push the prediction toward churn, negative values away from it.",
-  "model_name": "RandomForestClassifier",
-  "xai_method": "shap"
+  "model_name": "LogisticRegression",
+  "xai_method": "shap",
+  "assumed_features": { "PaperlessBilling": "Yes", "TotalCharges": 1074.0 }
 }
 ```
 
 `feature_importance` keeps the original response key so the existing frontend works
-unchanged; `top_factors`, `explanation`, `model_name` and `xai_method` are additive.
+unchanged; `top_factors`, `explanation`, `model_name`, `xai_method` and
+`assumed_features` are additive.
 
 ---
 

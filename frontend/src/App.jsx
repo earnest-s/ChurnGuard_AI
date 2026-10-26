@@ -331,6 +331,24 @@ export default function App() {
               </div>
 
               {result.explanation && <p className="explanation">{result.explanation}</p>}
+
+              {assumedEntries.length > 0 && (
+                <div className="assumed">
+                  <p className="assumed-title">Assumed from the reference profile</p>
+                  <ul className="assumed-list">
+                    {assumedEntries.map(([feature, value]) => (
+                      <li key={feature}>
+                        <span>{toLabel(feature)}</span>
+                        <strong>{String(value)}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="assumed-note">
+                    These inputs were not supplied, so the explanation is conditioned on them.
+                  </p>
+                </div>
+              )}
+
               {result.modelName && (
                 <p className="model-meta">
                   Model: <strong>{result.modelName}</strong>

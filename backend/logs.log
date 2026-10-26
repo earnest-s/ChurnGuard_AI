@@ -945,3 +945,364 @@ Please also refer to the documentation for alternative solver options:
 2026-10-26 21:54:33,327:INFO:Preloading libraries
 2026-10-26 21:54:33,562:WARNING:The total space of parameters 4 is smaller than n_iter=6. Running 4 iterations. For exhaustive searches, use GridSearchCV.
 
+2026-10-26 22:02:27,021:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2026-10-26 22:02:27,021:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2026-10-26 22:02:27,021:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2026-10-26 22:02:27,021:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2026-10-26 22:02:27,473:INFO:PyCaret ClassificationExperiment
+2026-10-26 22:02:27,473:INFO:Logging name: clf-default-name
+2026-10-26 22:02:27,473:INFO:ML Usecase: MLUsecase.CLASSIFICATION
+2026-10-26 22:02:27,473:INFO:version 3.3.2
+2026-10-26 22:02:27,478:INFO:Initializing setup()
+2026-10-26 22:02:27,478:INFO:self.USI: ac6e
+2026-10-26 22:02:27,478:INFO:self._variable_keys: {'idx', 'X_test', 'n_jobs_param', 'fold_shuffle_param', 'USI', 'html_param', 'y_train', 'exp_id', 'logging_param', 'is_multiclass', '_available_plots', 'fold_groups_param', 'fold_generator', 'gpu_n_jobs_param', 'seed', 'target_param', 'memory', 'exp_name_log', 'data', '_ml_usecase', 'y', 'X', 'fix_imbalance', 'log_plots_param', 'X_train', 'gpu_param', 'y_test', 'pipeline'}
+2026-10-26 22:02:27,478:INFO:Checking environment
+2026-10-26 22:02:27,478:INFO:python_version: 3.11.15
+2026-10-26 22:02:27,478:INFO:python_build: ('main', 'Jun 23 2026 15:20:37')
+2026-10-26 22:02:27,478:INFO:machine: AMD64
+2026-10-26 22:02:27,492:INFO:platform: Windows-10-10.0.26300-SP0
+2026-10-26 22:02:27,492:INFO:Memory: svmem(total=25463480320, available=11013742592, percent=56.7, used=14449737728, free=11013742592)
+2026-10-26 22:02:27,492:INFO:Physical Core: 14
+2026-10-26 22:02:27,492:INFO:Logical Core: 20
+2026-10-26 22:02:27,492:INFO:Checking libraries
+2026-10-26 22:02:27,492:INFO:System:
+2026-10-26 22:02:27,492:INFO:    python: 3.11.15 (main, Jun 23 2026, 15:20:37) [MSC v.1944 64 bit (AMD64)]
+2026-10-26 22:02:27,492:INFO:executable: D:\ChurnGuard_AI\backend\.venv\Scripts\python.exe
+2026-10-26 22:02:27,492:INFO:   machine: Windows-10-10.0.26300-SP0
+2026-10-26 22:02:27,492:INFO:PyCaret required dependencies:
+2026-10-26 22:02:27,492:WARNING:Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+
+2026-10-26 22:02:27,507:INFO:                 pip: 26.2.2
+2026-10-26 22:02:27,507:INFO:          setuptools: 79.0.1
+2026-10-26 22:02:27,507:INFO:             pycaret: 3.3.2
+2026-10-26 22:02:27,507:INFO:             IPython: 9.17.1
+2026-10-26 22:02:27,507:INFO:          ipywidgets: 8.1.9
+2026-10-26 22:02:27,507:INFO:                tqdm: 4.70.1
+2026-10-26 22:02:27,507:INFO:               numpy: 1.26.4
+2026-10-26 22:02:27,507:INFO:              pandas: 2.1.4
+2026-10-26 22:02:27,507:INFO:              jinja2: 3.1.6
+2026-10-26 22:02:27,507:INFO:               scipy: 1.11.4
+2026-10-26 22:02:27,507:INFO:              joblib: 1.3.2
+2026-10-26 22:02:27,507:INFO:             sklearn: 1.4.2
+2026-10-26 22:02:27,507:INFO:                pyod: 3.4.0
+2026-10-26 22:02:27,507:INFO:            imblearn: 0.14.2
+2026-10-26 22:02:27,507:INFO:   category_encoders: 2.7.0
+2026-10-26 22:02:27,507:INFO:            lightgbm: 4.7.0
+2026-10-26 22:02:27,507:INFO:               numba: 0.68.0
+2026-10-26 22:02:27,507:INFO:            requests: 2.34.2
+2026-10-26 22:02:27,507:INFO:          matplotlib: 3.7.5
+2026-10-26 22:02:27,507:INFO:          scikitplot: 0.3.7
+2026-10-26 22:02:27,507:INFO:         yellowbrick: 1.5
+2026-10-26 22:02:27,507:INFO:              plotly: 6.9.0
+2026-10-26 22:02:27,507:INFO:    plotly-resampler: Not installed
+2026-10-26 22:02:27,507:INFO:             kaleido: 1.5.0
+2026-10-26 22:02:27,507:INFO:           schemdraw: 0.15
+2026-10-26 22:02:27,507:INFO:         statsmodels: 0.15.0
+2026-10-26 22:02:27,507:INFO:              sktime: 0.26.0
+2026-10-26 22:02:27,507:INFO:               tbats: 1.1.3
+2026-10-26 22:02:27,507:INFO:            pmdarima: 2.0.4
+2026-10-26 22:02:27,507:INFO:              psutil: 7.2.2
+2026-10-26 22:02:27,507:INFO:          markupsafe: 3.0.4
+2026-10-26 22:02:27,507:INFO:             pickle5: Not installed
+2026-10-26 22:02:27,507:INFO:         cloudpickle: 3.1.2
+2026-10-26 22:02:27,507:INFO:         deprecation: 2.1.0
+2026-10-26 22:02:27,507:INFO:              xxhash: 4.0.2
+2026-10-26 22:02:27,507:INFO:           wurlitzer: Not installed
+2026-10-26 22:02:27,507:INFO:PyCaret optional dependencies:
+2026-10-26 22:02:27,913:INFO:                shap: 0.44.0
+2026-10-26 22:02:27,913:INFO:           interpret: Not installed
+2026-10-26 22:02:27,913:INFO:                umap: Not installed
+2026-10-26 22:02:27,913:INFO:     ydata_profiling: Not installed
+2026-10-26 22:02:27,913:INFO:  explainerdashboard: Not installed
+2026-10-26 22:02:27,913:INFO:             autoviz: Not installed
+2026-10-26 22:02:27,913:INFO:           fairlearn: Not installed
+2026-10-26 22:02:27,913:INFO:          deepchecks: Not installed
+2026-10-26 22:02:27,913:INFO:             xgboost: 2.0.3
+2026-10-26 22:02:27,913:INFO:            catboost: Not installed
+2026-10-26 22:02:27,913:INFO:              kmodes: Not installed
+2026-10-26 22:02:27,913:INFO:             mlxtend: Not installed
+2026-10-26 22:02:27,913:INFO:       statsforecast: Not installed
+2026-10-26 22:02:27,913:INFO:        tune_sklearn: Not installed
+2026-10-26 22:02:27,913:INFO:                 ray: Not installed
+2026-10-26 22:02:27,913:INFO:            hyperopt: Not installed
+2026-10-26 22:02:27,913:INFO:              optuna: Not installed
+2026-10-26 22:02:27,913:INFO:               skopt: Not installed
+2026-10-26 22:02:27,913:INFO:              mlflow: Not installed
+2026-10-26 22:02:27,913:INFO:              gradio: Not installed
+2026-10-26 22:02:27,913:INFO:             fastapi: 0.109.0
+2026-10-26 22:02:27,913:INFO:             uvicorn: 0.27.0
+2026-10-26 22:02:27,913:INFO:              m2cgen: Not installed
+2026-10-26 22:02:27,913:INFO:           evidently: Not installed
+2026-10-26 22:02:27,913:INFO:               fugue: Not installed
+2026-10-26 22:02:27,913:INFO:           streamlit: Not installed
+2026-10-26 22:02:27,913:INFO:             prophet: Not installed
+2026-10-26 22:02:27,913:INFO:None
+2026-10-26 22:02:27,913:INFO:Set up data.
+2026-10-26 22:02:27,922:INFO:Set up folding strategy.
+2026-10-26 22:02:27,922:INFO:Set up train/test split.
+2026-10-26 22:02:27,925:INFO:Set up index.
+2026-10-26 22:02:27,925:INFO:Assigning column types.
+2026-10-26 22:02:27,933:INFO:Engine successfully changes for model 'lr' to 'sklearn'.
+2026-10-26 22:02:27,955:INFO:Engine for model 'knn' has not been set explicitly, hence returning None.
+2026-10-26 22:02:27,956:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2026-10-26 22:02:27,982:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:27,983:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,013:INFO:Engine for model 'knn' has not been set explicitly, hence returning None.
+2026-10-26 22:02:28,013:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2026-10-26 22:02:28,033:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,038:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,039:INFO:Engine successfully changes for model 'knn' to 'sklearn'.
+2026-10-26 22:02:28,078:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2026-10-26 22:02:28,090:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,093:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,115:INFO:Engine for model 'rbfsvm' has not been set explicitly, hence returning None.
+2026-10-26 22:02:28,128:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,130:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,130:INFO:Engine successfully changes for model 'rbfsvm' to 'sklearn'.
+2026-10-26 22:02:28,164:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,167:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,203:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,205:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,207:INFO:Preparing preprocessing pipeline...
+2026-10-26 22:02:28,207:INFO:Set up simple imputation.
+2026-10-26 22:02:28,211:INFO:Set up encoding of ordinal features.
+2026-10-26 22:02:28,213:INFO:Set up encoding of categorical features.
+2026-10-26 22:02:28,329:INFO:Finished creating preprocessing pipeline.
+2026-10-26 22:02:28,356:INFO:Pipeline: Pipeline(memory=FastMemory(location=C:\Users\earni\AppData\Local\Temp\joblib),
+         steps=[('numerical_imputer',
+                 TransformerWrapper(exclude=None,
+                                    include=['SeniorCitizen', 'tenure',
+                                             'MonthlyCharges', 'TotalCharges'],
+                                    transformer=SimpleImputer(add_indicator=False,
+                                                              copy=True,
+                                                              fill_value=None,
+                                                              keep_empty_features=False,
+                                                              missing_values=nan,
+                                                              strategy='mean'))),
+                ('categor...
+                                             'Contract', 'PaymentMethod'],
+                                    transformer=OneHotEncoder(cols=['MultipleLines',
+                                                                    'InternetService',
+                                                                    'OnlineSecurity',
+                                                                    'OnlineBackup',
+                                                                    'DeviceProtection',
+                                                                    'TechSupport',
+                                                                    'StreamingTV',
+                                                                    'StreamingMovies',
+                                                                    'Contract',
+                                                                    'PaymentMethod'],
+                                                              drop_invariant=False,
+                                                              handle_missing='return_nan',
+                                                              handle_unknown='value',
+                                                              return_df=True,
+                                                              use_cat_names=True,
+                                                              verbose=0)))],
+         verbose=False)
+2026-10-26 22:02:28,356:INFO:Creating final display dataframe.
+2026-10-26 22:02:28,833:INFO:Setup _display_container:                     Description             Value
+0                    Session id                42
+1                        Target             Churn
+2                   Target type            Binary
+3           Original data shape        (7032, 20)
+4        Transformed data shape        (7032, 41)
+5   Transformed train set shape        (5625, 41)
+6    Transformed test set shape        (1407, 41)
+7              Numeric features                 4
+8          Categorical features                15
+9                    Preprocess              True
+10              Imputation type            simple
+11           Numeric imputation              mean
+12       Categorical imputation              mode
+13     Maximum one-hot encoding                25
+14              Encoding method              None
+15               Fold Generator   StratifiedKFold
+16                  Fold Number                 3
+17                     CPU Jobs                -1
+18                      Use GPU             False
+19               Log Experiment             False
+20              Experiment Name  clf-default-name
+21                          USI              ac6e
+2026-10-26 22:02:28,928:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,930:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,967:INFO:Soft dependency imported: xgboost: 2.0.3
+2026-10-26 22:02:28,969:WARNING:
+'catboost' is a soft dependency and not included in the pycaret installation. Please run: `pip install catboost` to install.
+Alternately, you can install this by running `pip install pycaret[models]`
+2026-10-26 22:02:28,969:INFO:setup() successfully completed in 1.5s...............
+2026-10-26 22:02:28,969:INFO:Initializing compare_models()
+2026-10-26 22:02:28,969:INFO:compare_models(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, include=['lr', 'dt', 'rf', 'et', 'gbc'], exclude=None, fold=None, round=4, cross_validation=True, sort=F1, n_select=1, budget_time=None, turbo=True, errors=ignore, fit_kwargs=None, groups=None, experiment_custom_tags=None, probability_threshold=None, verbose=False, parallel=None, caller_params={'self': <pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, 'include': ['lr', 'dt', 'rf', 'et', 'gbc'], 'exclude': None, 'fold': None, 'round': 4, 'cross_validation': True, 'sort': 'F1', 'n_select': 1, 'budget_time': None, 'turbo': True, 'errors': 'ignore', 'fit_kwargs': None, 'groups': None, 'experiment_custom_tags': None, 'probability_threshold': None, 'engine': None, 'verbose': False, 'parallel': None, '__class__': <class 'pycaret.classification.oop.ClassificationExperiment'>})
+2026-10-26 22:02:28,969:INFO:Checking exceptions
+2026-10-26 22:02:28,973:INFO:Preparing display monitor
+2026-10-26 22:02:28,974:INFO:Initializing Logistic Regression
+2026-10-26 22:02:28,974:INFO:Total runtime is 0.0 minutes
+2026-10-26 22:02:28,974:INFO:SubProcess create_model() called ==================================
+2026-10-26 22:02:28,974:INFO:Initializing create_model()
+2026-10-26 22:02:28,974:INFO:create_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=lr, fold=StratifiedKFold(n_splits=3, random_state=None, shuffle=False), round=4, cross_validation=True, predict=True, fit_kwargs={}, groups=None, refit=False, probability_threshold=None, experiment_custom_tags=None, verbose=False, system=False, add_to_model_list=True, metrics=None, display=<pycaret.internal.display.display.CommonDisplay object at 0x00000165F8BE6D50>, model_only=True, return_train_score=False, error_score=0.0, kwargs={})
+2026-10-26 22:02:28,974:INFO:Checking exceptions
+2026-10-26 22:02:28,974:INFO:Importing libraries
+2026-10-26 22:02:28,974:INFO:Copying training dataset
+2026-10-26 22:02:28,974:INFO:Defining folds
+2026-10-26 22:02:28,974:INFO:Declaring metric variables
+2026-10-26 22:02:28,974:INFO:Importing untrained model
+2026-10-26 22:02:28,974:INFO:Logistic Regression Imported successfully
+2026-10-26 22:02:28,974:INFO:Starting cross validation
+2026-10-26 22:02:28,974:INFO:Cross validating with StratifiedKFold(n_splits=3, random_state=None, shuffle=False), n_jobs=-1
+2026-10-26 22:02:31,433:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:31,449:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:31,456:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:31,775:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+
+2026-10-26 22:02:31,796:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+
+2026-10-26 22:02:31,812:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+
+2026-10-26 22:02:31,925:INFO:Calculating mean and std
+2026-10-26 22:02:31,925:INFO:Creating metrics dataframe
+2026-10-26 22:02:31,927:INFO:Uploading results into container
+2026-10-26 22:02:31,927:INFO:Uploading model into container now
+2026-10-26 22:02:31,927:INFO:_master_model_container: 1
+2026-10-26 22:02:31,927:INFO:_display_container: 2
+2026-10-26 22:02:31,927:INFO:LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                   intercept_scaling=1, l1_ratio=None, max_iter=1000,
+                   multi_class='auto', n_jobs=None, penalty='l2',
+                   random_state=42, solver='lbfgs', tol=0.0001, verbose=0,
+                   warm_start=False)
+2026-10-26 22:02:31,927:INFO:create_model() successfully completed......................................
+2026-10-26 22:02:31,983:INFO:SubProcess create_model() end ==================================
+2026-10-26 22:02:31,983:INFO:Creating metrics dataframe
+2026-10-26 22:02:31,993:INFO:Initializing Decision Tree Classifier
+2026-10-26 22:02:31,993:INFO:Total runtime is 0.050317152341206865 minutes
+2026-10-26 22:02:31,993:INFO:SubProcess create_model() called ==================================
+2026-10-26 22:02:31,993:INFO:Initializing create_model()
+2026-10-26 22:02:31,993:INFO:create_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=dt, fold=StratifiedKFold(n_splits=3, random_state=None, shuffle=False), round=4, cross_validation=True, predict=True, fit_kwargs={}, groups=None, refit=False, probability_threshold=None, experiment_custom_tags=None, verbose=False, system=False, add_to_model_list=True, metrics=None, display=<pycaret.internal.display.display.CommonDisplay object at 0x00000165F8BE6D50>, model_only=True, return_train_score=False, error_score=0.0, kwargs={})
+2026-10-26 22:02:31,993:INFO:Checking exceptions
+2026-10-26 22:02:31,993:INFO:Importing libraries
+2026-10-26 22:02:31,993:INFO:Copying training dataset
+2026-10-26 22:02:31,993:INFO:Defining folds
+2026-10-26 22:02:31,993:INFO:Declaring metric variables
+2026-10-26 22:02:31,993:INFO:Importing untrained model
+2026-10-26 22:02:31,993:INFO:Decision Tree Classifier Imported successfully
+2026-10-26 22:02:31,993:INFO:Starting cross validation
+2026-10-26 22:02:31,993:INFO:Cross validating with StratifiedKFold(n_splits=3, random_state=None, shuffle=False), n_jobs=-1
+2026-10-26 22:02:34,025:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:34,037:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:34,039:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:35,078:INFO:Calculating mean and std
+2026-10-26 22:02:35,078:INFO:Creating metrics dataframe
+2026-10-26 22:02:35,086:INFO:Uploading results into container
+2026-10-26 22:02:35,088:INFO:Uploading model into container now
+2026-10-26 22:02:35,088:INFO:_master_model_container: 2
+2026-10-26 22:02:35,088:INFO:_display_container: 2
+2026-10-26 22:02:35,088:INFO:DecisionTreeClassifier(ccp_alpha=0.0, class_weight=None, criterion='gini',
+                       max_depth=None, max_features=None, max_leaf_nodes=None,
+                       min_impurity_decrease=0.0, min_samples_leaf=1,
+                       min_samples_split=2, min_weight_fraction_leaf=0.0,
+                       monotonic_cst=None, random_state=42, splitter='best')
+2026-10-26 22:02:35,088:INFO:create_model() successfully completed......................................
+2026-10-26 22:02:35,301:INFO:SubProcess create_model() end ==================================
+2026-10-26 22:02:35,301:INFO:Creating metrics dataframe
+2026-10-26 22:02:35,303:INFO:Initializing Random Forest Classifier
+2026-10-26 22:02:35,303:INFO:Total runtime is 0.10549800793329875 minutes
+2026-10-26 22:02:35,312:INFO:SubProcess create_model() called ==================================
+2026-10-26 22:02:35,313:INFO:Initializing create_model()
+2026-10-26 22:02:35,313:INFO:create_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=rf, fold=StratifiedKFold(n_splits=3, random_state=None, shuffle=False), round=4, cross_validation=True, predict=True, fit_kwargs={}, groups=None, refit=False, probability_threshold=None, experiment_custom_tags=None, verbose=False, system=False, add_to_model_list=True, metrics=None, display=<pycaret.internal.display.display.CommonDisplay object at 0x00000165F8BE6D50>, model_only=True, return_train_score=False, error_score=0.0, kwargs={})
+2026-10-26 22:02:35,313:INFO:Checking exceptions
+2026-10-26 22:02:35,313:INFO:Importing libraries
+2026-10-26 22:02:35,313:INFO:Copying training dataset
+2026-10-26 22:02:35,336:INFO:Defining folds
+2026-10-26 22:02:35,342:INFO:Declaring metric variables
+2026-10-26 22:02:35,342:INFO:Importing untrained model
+2026-10-26 22:02:35,343:INFO:Random Forest Classifier Imported successfully
+2026-10-26 22:02:35,343:INFO:Starting cross validation
+2026-10-26 22:02:35,353:INFO:Cross validating with StratifiedKFold(n_splits=3, random_state=None, shuffle=False), n_jobs=-1
+2026-10-26 22:02:43,421:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:43,486:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:43,531:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:45,133:INFO:Calculating mean and std
+2026-10-26 22:02:45,133:INFO:Creating metrics dataframe
+2026-10-26 22:02:45,136:INFO:Uploading results into container
+2026-10-26 22:02:45,136:INFO:Uploading model into container now
+2026-10-26 22:02:45,143:INFO:_master_model_container: 3
+2026-10-26 22:02:45,143:INFO:_display_container: 2
+2026-10-26 22:02:45,144:INFO:RandomForestClassifier(bootstrap=True, ccp_alpha=0.0, class_weight=None,
+                       criterion='gini', max_depth=None, max_features='sqrt',
+                       max_leaf_nodes=None, max_samples=None,
+                       min_impurity_decrease=0.0, min_samples_leaf=1,
+                       min_samples_split=2, min_weight_fraction_leaf=0.0,
+                       monotonic_cst=None, n_estimators=100, n_jobs=-1,
+                       oob_score=False, random_state=42, verbose=0,
+                       warm_start=False)
+2026-10-26 22:02:45,144:INFO:create_model() successfully completed......................................
+2026-10-26 22:02:45,341:INFO:SubProcess create_model() end ==================================
+2026-10-26 22:02:45,341:INFO:Creating metrics dataframe
+2026-10-26 22:02:45,343:INFO:Initializing Extra Trees Classifier
+2026-10-26 22:02:45,343:INFO:Total runtime is 0.27282095352808633 minutes
+2026-10-26 22:02:45,343:INFO:SubProcess create_model() called ==================================
+2026-10-26 22:02:45,343:INFO:Initializing create_model()
+2026-10-26 22:02:45,343:INFO:create_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=et, fold=StratifiedKFold(n_splits=3, random_state=None, shuffle=False), round=4, cross_validation=True, predict=True, fit_kwargs={}, groups=None, refit=False, probability_threshold=None, experiment_custom_tags=None, verbose=False, system=False, add_to_model_list=True, metrics=None, display=<pycaret.internal.display.display.CommonDisplay object at 0x00000165F8BE6D50>, model_only=True, return_train_score=False, error_score=0.0, kwargs={})
+2026-10-26 22:02:45,343:INFO:Checking exceptions
+2026-10-26 22:02:45,343:INFO:Importing libraries
+2026-10-26 22:02:45,343:INFO:Copying training dataset
+2026-10-26 22:02:45,374:INFO:Defining folds
+2026-10-26 22:02:45,374:INFO:Declaring metric variables
+2026-10-26 22:02:45,374:INFO:Importing untrained model
+2026-10-26 22:02:45,376:INFO:Extra Trees Classifier Imported successfully
+2026-10-26 22:02:45,377:INFO:Starting cross validation
+2026-10-26 22:02:45,383:INFO:Cross validating with StratifiedKFold(n_splits=3, random_state=None, shuffle=False), n_jobs=-1
