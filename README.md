@@ -5,20 +5,21 @@ single deployable repository:
 
 | Area | Implementation |
 | --- | --- |
-| **AutoML** | `backend/train.py` compares candidate pipelines with PyCaret `compare_models` (stratified CV, F1 as the primary metric), tunes the winner, and exports the winning estimator as a portable scikit-learn pipeline. A built-in scikit-learn comparison is used when PyCaret is not installed. |
-| **Explainable AI** | SHAP (`TreeExplainer` / `LinearExplainer`) both offline (`backend/reports/shap_*.png`) and online: every `/predict` call returns the signed drivers for *that* customer. |
-| **DevOps** | Multi-stage, non-root Docker image with a healthcheck; GitHub Actions runs flake8 + pytest in a blocking `ci` job before the Azure Container Instances deployment; `GET /drift-status`, `GET /model-info` and a prediction log provide monitoring. |
-| MLOps | Drift detection (z-score vs. training statistics), model metadata/versioning, structured request logging, offline retraining. |
+| **AutoML** | `backend/train.py` tunes a LogisticRegression baseline with **Optuna** (TPE Bayesian search), then compares **PyCaret** and **FLAML** on the same stratified hold-out under a 60-second budget each and prints a leaderboard. It also runs a **deliberate leakage probe** (a synthetic `future_churn_indicator` column copied from the target), proves F1 rises to 1.0, drops it, and retrains. The winning estimator is exported as a portable scikit-learn pipeline. |
+| **Explainable AI** | SHAP (`TreeExplainer` / `LinearExplainer`) both offline (`backend/reports/shap_*.png`, including a force plot) and online: every `/predict` call returns the signed drivers for *that* customer and the React UI renders them as a force-style chart. |
+| **DevOps** | Multi-stage, non-root Docker image with a healthcheck; GitHub Actions runs flake8 + pytest in a blocking `ci` job before deployment; **Prometheus** metrics at `/metrics`, Kubernetes manifests with `replicas: 2`, and Terraform for an Azure Resource Group + Container Registry. |
+| MLOps | Drift detection (z-score vs. training statistics), model card (`GET /model-card`), structured request logging, offline retraining. |
 
 ```
 React + Vite (frontend/)
       │  POST /predict
       ▼
 FastAPI (backend/main.py) ──serves──▶ models/churn_pipeline.joblib
-      │                                     ▲
-      │ SHAP per request                    │ exported by
-      ▼                                     │
-top_factors + explanation          backend/train.py (PyCaret AutoML)
+      │  /metrics (Prometheus)             ▲
+      │  /model-card                       │ exported by
+      ▼                                    │
+top_factors + explanation + force plot     backend/train.py
+                                           (Optuna + PyCaret + FLAML + SHAP)
 ```
 
 ---
@@ -43,7 +44,7 @@ is always demoable. To serve the real AutoML + SHAP model:
 ```bash
 cd backend
 pip install -r requirements-train.txt   # PyCaret, matplotlib, xgboost
-python train.py                         # ~2-5 min, downloads the Telco dataset
+python train.py                         # ~3-6 min: Optuna + 60s PyCaret + 60s FLAML + SHAP
 uvicorn main:app --reload --port 8000
 ```
 
@@ -62,10 +63,12 @@ npm run dev     # http://localhost:5173
 ## Training (`backend/train.py`)
 
 ```bash
-python train.py                        # full run: AutoML + tuning + SHAP
-python train.py --fast                 # fewer candidates, quick sanity run
+python train.py                        # full run: Optuna + PyCaret + FLAML + SHAP
+python train.py --fast                 # fewer PyCaret candidates, quick sanity run
 python train.py --engine sklearn       # no PyCaret, local model comparison
 python train.py --no-download          # use data/telco_churn.csv only
+python train.py --budget-seconds 10    # shorter AutoML search (default 60)
+python train.py --optuna-trials 5      # fewer Bayesian trials (default 20)
 python train.py --allow-extra-estimators   # also try xgboost/lightgbm
 ```
 
@@ -73,32 +76,41 @@ The script prints, in order:
 
 1. **Dataset summary** - Telco Customer Churn (7 043 rows, 20 columns), identifier
    dropped, 11 blank `TotalCharges` rows removed.
-2. **Baseline** - `LogisticRegression` pipeline, 5-fold stratified CV F1 + hold-out F1.
-3. **AutoML comparison** - PyCaret `compare_models(sort="F1")`, then a small
-   randomized hyper-parameter search on the winner.
-4. **Leakage / bias checks** - computed, not asserted: identifier removal, target not
+2. **Baseline** - `LogisticRegression` pipeline tuned by **Optuna** (TPE sampler,
+   3-fold stratified CV F1); the untuned reference is printed for comparison.
+3. **AutoML tool comparison** - **PyCaret** and **FLAML** each get a 60-second
+   budget and are scored on the *same* stratified hold-out, alongside the Optuna
+   baseline. A small randomized search tunes the winning estimator.
+4. **Deliberate leakage probe** - a synthetic `future_churn_indicator` column is
+   appended as an exact copy of the label. The probe model reaches F1 ≈ 1.0; the
+   script prints `[WARNING] ...` and `[ACTION] Leaky feature dropped`, then retrains
+   on the real features. The column never enters the deployed pipeline.
+5. **Leakage / bias checks** - computed, not asserted: identifier removal, target not
    in features, `TotalCharges ≈ tenure × MonthlyCharges` redundancy test, duplicate
    rows, fit/transform isolation, class balance, plus per-group recall on `gender`
    and `SeniorCitizen`.
-5. **SHAP explainability** - global bar chart, beeswarm, and a waterfall for the
-   highest-risk customer.
-6. **Artifact export**.
+6. **SHAP explainability** - global bar chart, beeswarm, a waterfall and a force plot
+   for the highest-risk customer.
+7. **Artifact export and a `[PASS/FAIL]` validation summary** for Optuna, the
+   PyCaret-vs-FLAML comparison, the leakage probe, the SHAP plots, the FastAPI
+   endpoints, and the Kubernetes/Terraform files.
 
 | Artifact | Purpose |
 | --- | --- |
 | `backend/models/churn_pipeline.joblib` | Portable scikit-learn pipeline served by the API (no PyCaret at runtime). |
-| `backend/models/model_metadata.json` | Model card: metrics, reference profile, training statistics, global SHAP importance, leakage checks, fairness slices. |
+| `backend/models/model_metadata.json` | Model card: metrics, AutoML tool runs, leakage probe, reference profile, global SHAP importance, fairness slices, validation summary. |
 | `backend/models/reference_rows.joblib` | Training rows used to marginalise request fields the caller omits. |
 | `backend/reports/shap_summary_bar.png` | Global feature importance (report figure). |
 | `backend/reports/shap_beeswarm.png` | Effect direction and spread per feature. |
 | `backend/reports/shap_waterfall_high_risk.png` | Single-customer explanation. |
+| `backend/reports/shap_force_plot.png` | Additive force view for the highest-risk customer. |
 | `backend/reports/metrics.json` | Machine-readable copy of the metadata. |
 
 **Design note.** PyCaret is a training-time dependency only. The winning estimator is
 re-instantiated as a plain scikit-learn pipeline (`preprocess` + `model`) and refitted
-on the same split, so the container needs only scikit-learn + SHAP, cold starts are
-fast, and SHAP attribution is exact. This also keeps the Docker image ~10x smaller
-than an image with the full AutoML stack.
+on the same split, so the serving path only needs scikit-learn + SHAP, cold starts are
+fast, and SHAP attribution is exact. Optuna and FLAML are pinned in
+`requirements.txt` so the full training run is reproducible from one manifest.
 
 ---
 

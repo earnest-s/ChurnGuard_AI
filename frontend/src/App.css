@@ -210,6 +210,92 @@ button:disabled {
   color: var(--muted);
 }
 
+.force-plot {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(16, 35, 31, 0.14);
+  border-radius: 12px;
+  background: #fffdf8;
+}
+
+.force-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.force-title strong {
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text);
+}
+
+.force-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.force-track {
+  display: flex;
+  height: 12px;
+  border-radius: 999px;
+  background: #edf2ee;
+  overflow: hidden;
+}
+
+.force-track-left {
+  justify-content: flex-end;
+}
+
+.force-track-right {
+  justify-content: flex-start;
+}
+
+.force-bar {
+  height: 100%;
+  min-width: 4px;
+  border-radius: 999px;
+}
+
+.force-positive .force-bar {
+  background: linear-gradient(90deg, #e57373, #b71c1c);
+}
+
+.force-negative .force-bar {
+  background: linear-gradient(90deg, #66bb6a, #1b5e20);
+}
+
+.force-label {
+  min-width: 130px;
+  text-align: center;
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.force-label span {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.force-note {
+  margin: 8px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
 .model-meta {
   margin: 8px 0 0;
   font-size: 0.75rem;
@@ -341,5 +427,10 @@ button:disabled {
   .card {
     padding: 20px;
     border-radius: 16px;
+  }
+
+  .force-label {
+    min-width: 104px;
+    font-size: 0.72rem;
   }
 }

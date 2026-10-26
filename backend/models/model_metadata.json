@@ -1,7 +1,7 @@
 {
-  "trained_at": "2026-10-26T17:30:32+00:00",
+  "trained_at": "2026-10-26T17:34:13+00:00",
   "model_name": "LogisticRegression",
-  "engine": "sklearn",
+  "engine": "pycaret",
   "selection": "tuned ({'model__C': 10.0}) - validation F1 0.5642",
   "validation": {
     "split_size": 0.2,
@@ -45,7 +45,7 @@
     "automl": {
       "cv_f1_mean": 0.5951,
       "cv_f1_std": 0.0216,
-      "pycaret_holdout_f1": null,
+      "pycaret_holdout_f1": 0.6082,
       "f1": 0.6054,
       "precision": 0.6426,
       "recall": 0.5722,
@@ -81,15 +81,15 @@
     },
     {
       "tool": "PyCaret",
-      "budget_s": "n/a",
-      "holdout_f1": "n/a",
-      "notes": "unavailable"
+      "budget_s": 5.0,
+      "holdout_f1": 0.6082,
+      "notes": "LogisticRegression"
     },
     {
       "tool": "FLAML",
-      "budget_s": "n/a",
-      "holdout_f1": "n/a",
-      "notes": "unavailable"
+      "budget_s": 5.0,
+      "holdout_f1": 0.5795,
+      "notes": "lrl2"
     }
   ],
   "automl_tools": {
@@ -107,24 +107,41 @@
       "timeout_seconds": 5.0,
       "completed": true
     },
-    "pycaret": null,
-    "flaml": null
+    "pycaret": {
+      "engine": "pycaret",
+      "model_name": "LogisticRegression",
+      "pycaret_f1": 0.6082,
+      "candidates": [
+        "lr",
+        "dt",
+        "rf"
+      ],
+      "elapsed_seconds": 17.5,
+      "time_budget_seconds": 5.0
+    },
+    "flaml": {
+      "engine": "flaml",
+      "model_name": "lrl2",
+      "f1": 0.5795,
+      "elapsed_seconds": 5.1,
+      "time_budget_seconds": 5.0,
+      "best_config": {
+        "C": "1.6645000755176713"
+      },
+      "completed": true
+    }
   },
   "automl_leaderboard": [
     {
-      "model": "LogisticRegression",
-      "cv_f1_mean": 0.596,
-      "cv_f1_std": 0.0224
-    },
-    {
-      "model": "RandomForest",
-      "cv_f1_mean": 0.582,
-      "cv_f1_std": 0.0185
-    },
-    {
-      "model": "DecisionTree",
-      "cv_f1_mean": 0.5679,
-      "cv_f1_std": 0.0346
+      "model": "Logistic Regression",
+      "accuracy": 0.803,
+      "auc": 0.8469,
+      "recall": 0.5499,
+      "precision": 0.6534,
+      "f1": 0.597,
+      "kappa": 0.4679,
+      "mcc": 0.4711,
+      "tt_sec": 2.91
     }
   ],
   "leakage_probe": {
@@ -159,8 +176,8 @@
       },
       {
         "check": "FLAML vs PyCaret comparison completed.",
-        "passed": false,
-        "detail": "One of the AutoML engines did not complete"
+        "passed": true,
+        "detail": "PyCaret F1=0.6082, FLAML F1=0.5795"
       },
       {
         "check": "Deliberate Leakage test detected and feature dropped.",
@@ -183,8 +200,8 @@
         "detail": "k8s/deployment.yaml, k8s/service.yaml, terraform/main.tf, multi-stage Dockerfile"
       }
     ],
-    "passed": false,
-    "passed_count": 5,
+    "passed": true,
+    "passed_count": 6,
     "total": 6
   },
   "numeric_features": [

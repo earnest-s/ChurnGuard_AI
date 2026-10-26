@@ -29,6 +29,7 @@ import json
 import platform
 import sys
 import time
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -646,19 +647,25 @@ def run_flaml(
     model = AutoML()
     start = time.perf_counter()
     try:
-        model.fit(
-            X_train=X_train,
-            y_train=y_train,
-            task="classification",
-            metric="f1",
-            time_budget=time_budget,
-            estimator_list=["lrl1", "lrl2", "rf"],
-            eval_method="holdout",
-            split_ratio=0.2,
-            seed=RANDOM_STATE,
-            verbose=0,
-            log_file_name="",
-        )
+        from sklearn.exceptions import ConvergenceWarning
+
+        with warnings.catch_warnings():
+            # FLAML fits hundreds of linear models; convergence warnings from
+            # the internal search would drown out the useful output.
+            warnings.simplefilter("ignore", ConvergenceWarning)
+            model.fit(
+                X_train=X_train,
+                y_train=y_train,
+                task="classification",
+                metric="f1",
+                time_budget=time_budget,
+                estimator_list=["lrl1", "lrl2", "rf"],
+                eval_method="holdout",
+                split_ratio=0.2,
+                seed=RANDOM_STATE,
+                verbose=0,
+                log_file_name="",
+            )
         flaml_f1 = round(float(f1_score(y_test, model.predict(X_test))), 4)
     except Exception as exc:  # pragma: no cover - depends on the FLAML install
         print(f"!  FLAML run failed ({type(exc).__name__}: {exc}).")

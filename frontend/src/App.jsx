@@ -125,6 +125,14 @@ export default function App() {
         probability,
         label,
         importance,
+        topFactors: Array.isArray(data.top_factors)
+          ? data.top_factors.filter(
+              (factor) =>
+                factor &&
+                typeof factor.feature === 'string' &&
+                typeof factor.contribution === 'number',
+            )
+          : [],
         explanation: typeof data.explanation === 'string' ? data.explanation : '',
         modelName: typeof data.model_name === 'string' ? data.model_name : '',
         xaiMethod: typeof data.xai_method === 'string' ? data.xai_method : '',
@@ -189,6 +197,11 @@ export default function App() {
 
   const assumedEntries = result?.assumedFeatures ? result.assumedFeatures : []
   const aggregation = result?.aggregation || {}
+  const forceEntries = result?.topFactors ? result.topFactors : []
+  const forceMax = forceEntries.reduce(
+    (max, factor) => Math.max(max, Math.abs(factor.contribution)),
+    0,
+  )
 
   const toLabel = (name) =>
     name
@@ -329,6 +342,48 @@ export default function App() {
               </div>
 
               {result.explanation && <p className="explanation">{result.explanation}</p>}
+
+              {forceEntries.length > 0 && (
+                <div className="force-plot">
+                  <div className="force-title">
+                    <span>← retention</span>
+                    <strong>SHAP force plot · top {forceEntries.length}</strong>
+                    <span>churn →</span>
+                  </div>
+                  {forceEntries.map(({ feature, contribution }) => {
+                    const positive = contribution >= 0
+                    const width = Math.max(
+                      4,
+                      forceMax > 0 ? (Math.abs(contribution) / forceMax) * 100 : 4,
+                    )
+
+                    return (
+                      <div
+                        className={`force-row ${positive ? 'force-positive' : 'force-negative'}`}
+                        key={feature}
+                      >
+                        <div className="force-track force-track-left">
+                          {!positive && <div className="force-bar" style={{ width: `${width}%` }} />}
+                        </div>
+                        <div className="force-label">
+                          {toLabel(feature)}
+                          <span>
+                            {contribution > 0 ? '+' : ''}
+                            {contribution.toFixed(3)}
+                          </span>
+                        </div>
+                        <div className="force-track force-track-right">
+                          {positive && <div className="force-bar" style={{ width: `${width}%` }} />}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <p className="force-note">
+                    Signed SHAP contributions in log-odds. Red pushes this customer toward churn,
+                    green pushes toward retention.
+                  </p>
+                </div>
+              )}
 
               {assumedEntries.length > 0 && (
                 <div className="assumed">
