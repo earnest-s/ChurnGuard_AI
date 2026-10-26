@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-10-26T16:24:34+00:00",
+  "trained_at": "2026-10-26T16:33:08+00:00",
   "model_name": "LogisticRegression",
   "engine": "pycaret",
   "selection": "tuned ({'model__C': 10.0}) - validation F1 0.5642",
@@ -72,7 +72,7 @@
       "f1": 0.5964,
       "kappa": 0.4671,
       "mcc": 0.4702,
-      "tt_sec": 0.7567
+      "tt_sec": 0.9833
     },
     {
       "model": "Gradient Boosting Classifier",
@@ -83,7 +83,7 @@
       "f1": 0.5886,
       "kappa": 0.4589,
       "mcc": 0.4629,
-      "tt_sec": 0.83
+      "tt_sec": 2.3067
     },
     {
       "model": "Random Forest Classifier",
@@ -94,7 +94,7 @@
       "f1": 0.558,
       "kappa": 0.4227,
       "mcc": 0.4278,
-      "tt_sec": 0.7567
+      "tt_sec": 3.26
     },
     {
       "model": "Extra Trees Classifier",
@@ -105,7 +105,7 @@
       "f1": 0.5465,
       "kappa": 0.4046,
       "mcc": 0.4084,
-      "tt_sec": 0.7267
+      "tt_sec": 1.8867
     },
     {
       "model": "Decision Tree Classifier",
@@ -116,7 +116,7 @@
       "f1": 0.5068,
       "kappa": 0.3213,
       "mcc": 0.3217,
-      "tt_sec": 0.69
+      "tt_sec": 1.03
     }
   ],
   "numeric_features": [
@@ -183,6 +183,32 @@
     "PaymentMethod": "Electronic check",
     "MonthlyCharges": 70.6,
     "TotalCharges": 1410.25
+  },
+  "reference_profile": {
+    "source": "observed training customer whose predicted risk is closest to the churn base rate",
+    "base_rate": 0.2658,
+    "predicted_probability": 0.2661,
+    "values": {
+      "gender": "Female",
+      "SeniorCitizen": "0",
+      "Partner": "No",
+      "Dependents": "No",
+      "tenure": 10.0,
+      "PhoneService": "No",
+      "MultipleLines": "No phone service",
+      "InternetService": "DSL",
+      "OnlineSecurity": "Yes",
+      "OnlineBackup": "Yes",
+      "DeviceProtection": "Yes",
+      "TechSupport": "No",
+      "StreamingTV": "No",
+      "StreamingMovies": "No",
+      "Contract": "Month-to-month",
+      "PaperlessBilling": "No",
+      "PaymentMethod": "Bank transfer (automatic)",
+      "MonthlyCharges": 40.7,
+      "TotalCharges": 449.3
+    }
   },
   "training_stats": {
     "tenure": {

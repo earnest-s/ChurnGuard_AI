@@ -47,14 +47,28 @@ and the figures in `backend/reports/*.png`.
 > scikit-learn pipeline, so no information from the hold-out set leaks into
 > training. `customerID` was dropped as an identifier, and the 11 rows with a blank
 > `TotalCharges` were removed. `TotalCharges` is almost a linear function of
-> `tenure x MonthlyCharges` (Pearson r = 0.999), which is redundancy rather than
-> target leakage, because the value is known before the prediction is made; keeping
-> it was a deliberate decision and the SHAP plots show how it shares credit with
-> `tenure`. A fairness slice on `gender` and `SeniorCitizen` is printed by the same
-> script; the per-group recall values are within <fill in> points of each other.
+> `tenure x MonthlyCharges` (Pearson r = 1.000 to three decimals), which is
+> redundancy rather than target leakage, because the value is known before the
+> prediction is made; keeping it was a deliberate decision and the SHAP plots show
+> how it shares credit with `tenure`. A fairness slice on `gender` and
+> `SeniorCitizen` is printed by the same script; per-group recall is 0.556 / 0.588
+> for female / male customers and 0.540 / 0.667 for non-senior / senior customers.
+>
+> **The AutoML search did not beat the manual baseline**, and the report should say
+> so: the PyCaret winner was a logistic regression (CV F1 0.5964, ahead of gradient
+> boosting 0.5886, random forest 0.5580, extra trees 0.5465 and a decision tree
+> 0.5068), and after tuning it scored a hold-out F1 of 0.6054 against 0.6099 for the
+> baseline - a difference of -0.0045, i.e. well inside the +-0.0216 cross-validation
+> standard deviation. That is the expected result for a mostly-linear, mostly
+> categorical dataset: AutoML adds a defensible *selection* process and a tuning
+> record, not free accuracy. The deployed artifact is still the AutoML winner
+> because the pipeline, the tuning search and the model card are the same code path
+> that would pick a better model on a different dataset.
 
 **What NOT to claim**
 
+- Do not claim AutoML improved accuracy: the measured difference is negative and
+  within noise (see above).
 - Do not write "eliminated leakage" as a slogan: point at the computed checks
   (`leakage_checks` in `/model-info`).
 - Do not present the PyCaret hold-out F1 and the scikit-learn hold-out F1 as the
@@ -69,9 +83,9 @@ and the figures in `backend/reports/*.png`.
 
 | File | What it shows | Caption suggestion |
 | --- | --- | --- |
-| `shap_summary_bar.png` | mean absolute SHAP value per feature (global importance) | "Global feature importance measured with SHAP on the hold-out set; `Contract`, `tenure` and `TotalCharges` dominate." |
-| `shap_beeswarm.png` | direction + spread of every feature's effect | "SHAP beeswarm: month-to-month contracts and low tenure push predictions toward churn, long tenure pushes away from it." |
-| `shap_waterfall_high_risk.png` | single-customer explanation | "Local explanation of the highest-risk customer: how each feature value moves the prediction away from the base rate." |
+| `shap_summary_bar.png` | mean absolute SHAP value per feature (global importance) | "Global feature importance measured with SHAP on 200 hold-out rows: `MonthlyCharges` (0.179), `tenure` (0.156) and `InternetService` (0.124) carry most of the signal, ahead of `Contract` (0.073) and `TotalCharges` (0.069)." |
+| `shap_beeswarm.png` | direction + spread of every feature's effect | "SHAP beeswarm: high `MonthlyCharges` and fibre-optic `InternetService` push the prediction toward churn, while long `tenure` pushes it away; the spread shows these effects vary substantially between customers." |
+| `shap_waterfall_high_risk.png` | single-customer explanation | "Local explanation of the highest-risk hold-out customer: how each feature value moves the prediction away from the base rate (the title prints that customer's predicted probability)." |
 
 **Method paragraph**
 
@@ -89,7 +103,10 @@ and the figures in `backend/reports/*.png`.
 > `POST /predict` returns `feature_importance` (normalised absolute SHAP values),
 > the three signed `top_factors`, and a generated English `explanation`. The React
 > front-end renders the ranking as a bar chart, so a retention agent can see *why*
-> a customer is flagged instead of only the score.
+> a customer is flagged instead of only the score. The form takes the three
+> original fields plus an optional Telco profile; anything left blank is filled
+> from the model's reference customer and listed back under "Assumed from the
+> reference profile", so an explanation is never conditioned on invisible inputs.
 
 **Honesty note worth one sentence**
 

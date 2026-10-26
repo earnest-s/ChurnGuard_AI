@@ -1306,3 +1306,120 @@ Please also refer to the documentation for alternative solver options:
 2026-10-26 22:02:45,376:INFO:Extra Trees Classifier Imported successfully
 2026-10-26 22:02:45,377:INFO:Starting cross validation
 2026-10-26 22:02:45,383:INFO:Cross validating with StratifiedKFold(n_splits=3, random_state=None, shuffle=False), n_jobs=-1
+2026-10-26 22:02:50,627:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:50,647:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:50,672:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:51,039:INFO:Calculating mean and std
+2026-10-26 22:02:51,039:INFO:Creating metrics dataframe
+2026-10-26 22:02:51,041:INFO:Uploading results into container
+2026-10-26 22:02:51,041:INFO:Uploading model into container now
+2026-10-26 22:02:51,041:INFO:_master_model_container: 4
+2026-10-26 22:02:51,041:INFO:_display_container: 2
+2026-10-26 22:02:51,041:INFO:ExtraTreesClassifier(bootstrap=False, ccp_alpha=0.0, class_weight=None,
+                     criterion='gini', max_depth=None, max_features='sqrt',
+                     max_leaf_nodes=None, max_samples=None,
+                     min_impurity_decrease=0.0, min_samples_leaf=1,
+                     min_samples_split=2, min_weight_fraction_leaf=0.0,
+                     monotonic_cst=None, n_estimators=100, n_jobs=-1,
+                     oob_score=False, random_state=42, verbose=0,
+                     warm_start=False)
+2026-10-26 22:02:51,041:INFO:create_model() successfully completed......................................
+2026-10-26 22:02:51,103:INFO:SubProcess create_model() end ==================================
+2026-10-26 22:02:51,103:INFO:Creating metrics dataframe
+2026-10-26 22:02:51,105:INFO:Initializing Gradient Boosting Classifier
+2026-10-26 22:02:51,105:INFO:Total runtime is 0.3688510139783223 minutes
+2026-10-26 22:02:51,105:INFO:SubProcess create_model() called ==================================
+2026-10-26 22:02:51,105:INFO:Initializing create_model()
+2026-10-26 22:02:51,105:INFO:create_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=gbc, fold=StratifiedKFold(n_splits=3, random_state=None, shuffle=False), round=4, cross_validation=True, predict=True, fit_kwargs={}, groups=None, refit=False, probability_threshold=None, experiment_custom_tags=None, verbose=False, system=False, add_to_model_list=True, metrics=None, display=<pycaret.internal.display.display.CommonDisplay object at 0x00000165F8BE6D50>, model_only=True, return_train_score=False, error_score=0.0, kwargs={})
+2026-10-26 22:02:51,105:INFO:Checking exceptions
+2026-10-26 22:02:51,105:INFO:Importing libraries
+2026-10-26 22:02:51,105:INFO:Copying training dataset
+2026-10-26 22:02:51,106:INFO:Defining folds
+2026-10-26 22:02:51,106:INFO:Declaring metric variables
+2026-10-26 22:02:51,106:INFO:Importing untrained model
+2026-10-26 22:02:51,106:INFO:Gradient Boosting Classifier Imported successfully
+2026-10-26 22:02:51,106:INFO:Starting cross validation
+2026-10-26 22:02:51,109:INFO:Cross validating with StratifiedKFold(n_splits=3, random_state=None, shuffle=False), n_jobs=-1
+2026-10-26 22:02:57,345:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:57,345:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:57,345:WARNING:D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\_distutils_hack\__init__.py:30: UserWarning: Setuptools is replacing distutils. Support for replacing an already imported distutils is deprecated. In the future, this condition will fail. Register concerns at https://github.com/pypa/setuptools/issues/new?template=distutils-deprecation.yml
+  warnings.warn(
+
+2026-10-26 22:02:58,029:INFO:Calculating mean and std
+2026-10-26 22:02:58,029:INFO:Creating metrics dataframe
+2026-10-26 22:02:58,030:INFO:Uploading results into container
+2026-10-26 22:02:58,030:INFO:Uploading model into container now
+2026-10-26 22:02:58,030:INFO:_master_model_container: 5
+2026-10-26 22:02:58,030:INFO:_display_container: 2
+2026-10-26 22:02:58,030:INFO:GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
+                           learning_rate=0.1, loss='log_loss', max_depth=3,
+                           max_features=None, max_leaf_nodes=None,
+                           min_impurity_decrease=0.0, min_samples_leaf=1,
+                           min_samples_split=2, min_weight_fraction_leaf=0.0,
+                           n_estimators=100, n_iter_no_change=None,
+                           random_state=42, subsample=1.0, tol=0.0001,
+                           validation_fraction=0.1, verbose=0,
+                           warm_start=False)
+2026-10-26 22:02:58,030:INFO:create_model() successfully completed......................................
+2026-10-26 22:02:58,097:INFO:SubProcess create_model() end ==================================
+2026-10-26 22:02:58,097:INFO:Creating metrics dataframe
+2026-10-26 22:02:58,099:WARNING:Styler.applymap has been deprecated. Use Styler.map instead.
+
+2026-10-26 22:02:58,099:INFO:Initializing create_model()
+2026-10-26 22:02:58,099:INFO:create_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                   intercept_scaling=1, l1_ratio=None, max_iter=1000,
+                   multi_class='auto', n_jobs=None, penalty='l2',
+                   random_state=42, solver='lbfgs', tol=0.0001, verbose=0,
+                   warm_start=False), fold=StratifiedKFold(n_splits=3, random_state=None, shuffle=False), round=4, cross_validation=False, predict=False, fit_kwargs={}, groups=None, refit=True, probability_threshold=None, experiment_custom_tags=None, verbose=False, system=False, add_to_model_list=True, metrics=None, display=None, model_only=True, return_train_score=False, error_score=0.0, kwargs={})
+2026-10-26 22:02:58,099:INFO:Checking exceptions
+2026-10-26 22:02:58,099:INFO:Importing libraries
+2026-10-26 22:02:58,099:INFO:Copying training dataset
+2026-10-26 22:02:58,103:INFO:Defining folds
+2026-10-26 22:02:58,103:INFO:Declaring metric variables
+2026-10-26 22:02:58,103:INFO:Importing untrained model
+2026-10-26 22:02:58,103:INFO:Declaring custom model
+2026-10-26 22:02:58,103:INFO:Logistic Regression Imported successfully
+2026-10-26 22:02:58,103:INFO:Cross validation set to False
+2026-10-26 22:02:58,103:INFO:Fitting Model
+2026-10-26 22:03:00,485:WARNING:lbfgs failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+
+2026-10-26 22:03:00,488:INFO:LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                   intercept_scaling=1, l1_ratio=None, max_iter=1000,
+                   multi_class='auto', n_jobs=None, penalty='l2',
+                   random_state=42, solver='lbfgs', tol=0.0001, verbose=0,
+                   warm_start=False)
+2026-10-26 22:03:00,488:INFO:create_model() successfully completed......................................
+2026-10-26 22:03:00,700:INFO:_master_model_container: 5
+2026-10-26 22:03:00,700:INFO:_display_container: 2
+2026-10-26 22:03:00,700:INFO:LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                   intercept_scaling=1, l1_ratio=None, max_iter=1000,
+                   multi_class='auto', n_jobs=None, penalty='l2',
+                   random_state=42, solver='lbfgs', tol=0.0001, verbose=0,
+                   warm_start=False)
+2026-10-26 22:03:00,700:INFO:compare_models() successfully completed......................................
+2026-10-26 22:03:00,703:INFO:Initializing predict_model()
+2026-10-26 22:03:00,703:INFO:predict_model(self=<pycaret.classification.oop.ClassificationExperiment object at 0x00000165F45465D0>, estimator=LogisticRegression(C=1.0, class_weight=None, dual=False, fit_intercept=True,
+                   intercept_scaling=1, l1_ratio=None, max_iter=1000,
+                   multi_class='auto', n_jobs=None, penalty='l2',
+                   random_state=42, solver='lbfgs', tol=0.0001, verbose=0,
+                   warm_start=False), probability_threshold=None, encoded_labels=False, raw_score=False, round=4, verbose=False, ml_usecase=None, preprocess=True, encode_labels=<function _SupervisedExperiment.predict_model.<locals>.encode_labels at 0x00000165F8908EA0>)
+2026-10-26 22:03:00,703:INFO:Checking exceptions
+2026-10-26 22:03:00,704:INFO:Preloading libraries
+2026-10-26 22:03:02,073:WARNING:The total space of parameters 4 is smaller than n_iter=6. Running 4 iterations. For exhaustive searches, use GridSearchCV.
+
