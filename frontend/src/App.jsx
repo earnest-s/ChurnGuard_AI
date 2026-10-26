@@ -11,7 +11,44 @@ const initialFormState = {
   monthly_charges: '',
   contract_type: '0',
   support_calls: '',
+  internet_service: '',
+  payment_method: '',
+  paperless_billing: '',
+  online_security: '',
+  tech_support: '',
+  streaming_tv: '',
+  streaming_movies: '',
+  partner: '',
+  dependents: '',
+  senior_citizen: '',
 }
+
+const YES_NO = ['Yes', 'No']
+const SERVICE_OPTIONS = ['Yes', 'No', 'No internet service']
+
+// Extra Telco fields the API accepts. Anything left blank falls back to the
+// model's reference customer, and the response says which values were assumed.
+const ADVANCED_FIELDS = [
+  { name: 'internet_service', label: 'Internet Service', options: ['DSL', 'Fiber optic', 'No'] },
+  {
+    name: 'payment_method',
+    label: 'Payment Method',
+    options: [
+      'Bank transfer (automatic)',
+      'Credit card (automatic)',
+      'Electronic check',
+      'Mailed check',
+    ],
+  },
+  { name: 'paperless_billing', label: 'Paperless Billing', options: YES_NO },
+  { name: 'online_security', label: 'Online Security', options: SERVICE_OPTIONS },
+  { name: 'tech_support', label: 'Tech Support', options: SERVICE_OPTIONS },
+  { name: 'streaming_tv', label: 'Streaming TV', options: SERVICE_OPTIONS },
+  { name: 'streaming_movies', label: 'Streaming Movies', options: SERVICE_OPTIONS },
+  { name: 'partner', label: 'Partner', options: YES_NO },
+  { name: 'dependents', label: 'Dependents', options: YES_NO },
+  { name: 'senior_citizen', label: 'Senior Citizen', options: [['true', 'Yes'], ['false', 'No']] },
+]
 
 export default function App() {
   const [formData, setFormData] = useState(initialFormState)
@@ -60,6 +97,12 @@ export default function App() {
         contract_type: Number(formData.contract_type),
         support_calls: Number(formData.support_calls),
       }
+
+      ADVANCED_FIELDS.forEach(({ name }) => {
+        const value = formData[name]
+        if (value === '') return
+        payload[name] = name === 'senior_citizen' ? value === 'true' : value
+      })
 
       const response = await fetch(`${API_URL}/predict`, {
         method: 'POST',

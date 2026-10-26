@@ -11,6 +11,7 @@ import importlib
 import json
 
 import joblib
+import numpy as np
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
