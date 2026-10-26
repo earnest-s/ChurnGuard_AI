@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-10-26T17:34:13+00:00",
+  "trained_at": "2026-10-26T17:37:39+00:00",
   "model_name": "LogisticRegression",
   "engine": "pycaret",
   "selection": "tuned ({'model__C': 10.0}) - validation F1 0.5642",
@@ -24,9 +24,9 @@
   },
   "metrics": {
     "baseline": {
-      "method": "Optuna (2 trials, 0.8s)",
-      "cv_f1_mean": 0.6275,
-      "cv_f1_std": 0.0051,
+      "method": "Optuna (20 trials, 10.5s)",
+      "cv_f1_mean": 0.6338,
+      "cv_f1_std": 0.0029,
       "untuned": {
         "cv_f1_mean": 0.596,
         "cv_f1_std": 0.0224,
@@ -36,11 +36,11 @@
         "roc_auc": 0.8359,
         "accuracy": 0.8045
       },
-      "f1": 0.6093,
-      "precision": 0.4975,
-      "recall": 0.7861,
-      "roc_auc": 0.8336,
-      "accuracy": 0.7321
+      "f1": 0.6061,
+      "precision": 0.4901,
+      "recall": 0.7941,
+      "roc_auc": 0.8351,
+      "accuracy": 0.7257
     },
     "automl": {
       "cv_f1_mean": 0.5951,
@@ -52,16 +52,16 @@
       "roc_auc": 0.8353,
       "accuracy": 0.8017
     },
-    "f1_improvement_over_baseline": -0.0039
+    "f1_improvement_over_baseline": -0.0007
   },
   "comparison": [
     {
       "model": "Baseline LogisticRegression (Optuna)",
-      "cv_f1_mean": 0.6275,
-      "holdout_f1": 0.6093,
-      "precision": 0.4975,
-      "recall": 0.7861,
-      "roc_auc": 0.8336
+      "cv_f1_mean": 0.6338,
+      "holdout_f1": 0.6061,
+      "precision": 0.4901,
+      "recall": 0.7941,
+      "roc_auc": 0.8351
     },
     {
       "model": "AutoML winner (LogisticRegression)",
@@ -75,36 +75,36 @@
   "tool_comparison": [
     {
       "tool": "Optuna (baseline LR)",
-      "budget_s": 5.0,
-      "holdout_f1": 0.6093,
-      "notes": "Optuna (2 trials, 0.8s)"
+      "budget_s": 60,
+      "holdout_f1": 0.6061,
+      "notes": "Optuna (20 trials, 10.5s)"
     },
     {
       "tool": "PyCaret",
-      "budget_s": 5.0,
+      "budget_s": 60,
       "holdout_f1": 0.6082,
       "notes": "LogisticRegression"
     },
     {
       "tool": "FLAML",
-      "budget_s": 5.0,
-      "holdout_f1": 0.5795,
-      "notes": "lrl2"
+      "budget_s": 60,
+      "holdout_f1": 0.5844,
+      "notes": "rf"
     }
   ],
   "automl_tools": {
     "optuna": {
       "best_params": {
-        "C": "0.0060252157362038605",
+        "C": "1.1462107403425035",
         "class_weight": "balanced",
         "fit_intercept": "False"
       },
-      "cv_f1_mean": 0.6275,
-      "cv_f1_std": 0.0051,
-      "n_trials": 2,
-      "requested_trials": 2,
-      "elapsed_seconds": 0.8,
-      "timeout_seconds": 5.0,
+      "cv_f1_mean": 0.6338,
+      "cv_f1_std": 0.0029,
+      "n_trials": 20,
+      "requested_trials": 20,
+      "elapsed_seconds": 10.5,
+      "timeout_seconds": 60,
       "completed": true
     },
     "pycaret": {
@@ -114,19 +114,24 @@
       "candidates": [
         "lr",
         "dt",
-        "rf"
+        "rf",
+        "et",
+        "gbc"
       ],
-      "elapsed_seconds": 17.5,
-      "time_budget_seconds": 5.0
+      "elapsed_seconds": 60.2,
+      "time_budget_seconds": 60
     },
     "flaml": {
       "engine": "flaml",
-      "model_name": "lrl2",
-      "f1": 0.5795,
-      "elapsed_seconds": 5.1,
-      "time_budget_seconds": 5.0,
+      "model_name": "rf",
+      "f1": 0.5844,
+      "elapsed_seconds": 60.0,
+      "time_budget_seconds": 60,
       "best_config": {
-        "C": "1.6645000755176713"
+        "n_estimators": "7",
+        "max_features": "0.4067529380232158",
+        "max_leaves": "62",
+        "criterion": "gini"
       },
       "completed": true
     }
@@ -141,7 +146,51 @@
       "f1": 0.597,
       "kappa": 0.4679,
       "mcc": 0.4711,
-      "tt_sec": 2.91
+      "tt_sec": 3.7267
+    },
+    {
+      "model": "Gradient Boosting Classifier",
+      "accuracy": 0.8028,
+      "auc": 0.8474,
+      "recall": 0.5251,
+      "precision": 0.6627,
+      "f1": 0.5859,
+      "kappa": 0.4588,
+      "mcc": 0.4642,
+      "tt_sec": 4.1567
+    },
+    {
+      "model": "Random Forest Classifier",
+      "accuracy": 0.7937,
+      "auc": 0.8254,
+      "recall": 0.497,
+      "precision": 0.6452,
+      "f1": 0.5615,
+      "kappa": 0.4296,
+      "mcc": 0.4358,
+      "tt_sec": 3.64
+    },
+    {
+      "model": "Extra Trees Classifier",
+      "accuracy": 0.7724,
+      "auc": 0.797,
+      "recall": 0.4762,
+      "precision": 0.5883,
+      "f1": 0.526,
+      "kappa": 0.3786,
+      "mcc": 0.3824,
+      "tt_sec": 2.1333
+    },
+    {
+      "model": "Decision Tree Classifier",
+      "accuracy": 0.7268,
+      "auc": 0.6571,
+      "recall": 0.5077,
+      "precision": 0.4865,
+      "f1": 0.4966,
+      "kappa": 0.3094,
+      "mcc": 0.3096,
+      "tt_sec": 3.2867
     }
   ],
   "leakage_probe": {
@@ -172,12 +221,12 @@
       {
         "check": "Optuna Bayesian Optimization completed.",
         "passed": true,
-        "detail": "2 trials, best CV F1 0.6275, 0.8s"
+        "detail": "20 trials, best CV F1 0.6338, 10.5s"
       },
       {
         "check": "FLAML vs PyCaret comparison completed.",
         "passed": true,
-        "detail": "PyCaret F1=0.6082, FLAML F1=0.5795"
+        "detail": "PyCaret F1=0.6082, FLAML F1=0.5844"
       },
       {
         "check": "Deliberate Leakage test detected and feature dropped.",

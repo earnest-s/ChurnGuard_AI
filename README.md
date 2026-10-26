@@ -118,9 +118,11 @@ fast, and SHAP attribution is exact. Optuna and FLAML are pinned in
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/` | Healthcheck (used by the Docker `HEALTHCHECK`). |
+| `GET` | `/` | Healthcheck (used by the Docker `HEALTHCHECK` and K8s liveness probe). |
 | `POST` | `/predict` | Churn probability + prediction + per-customer SHAP drivers. |
-| `GET` | `/model-info` | Model card: metrics, SHAP top features, leakage checks, fairness slices. |
+| `GET` | `/model-card` | Structured model card: dataset, metrics, intended use, known limits, leakage probe, validation summary. |
+| `GET` | `/model-info` | Detailed local model metadata: reference profile, feature defaults, fairness slices. |
+| `GET` | `/metrics` | Prometheus metrics (request counts, latency histograms, in-progress requests). |
 | `GET` | `/drift-status` | Whether recent requests drifted from the training distribution. |
 | `POST` | `/retrain` | Online retrain from the prediction log (fallback model only). |
 
@@ -193,7 +195,9 @@ Response:
 
 `feature_importance` keeps the original response key so the existing frontend works
 unchanged; `top_factors`, `explanation`, `model_name`, `xai_method`,
-`assumed_features` and `aggregation` are additive.
+`assumed_features` and `aggregation` are additive. The React UI renders
+`top_factors` as a signed **SHAP force plot** (red pushes toward churn, green toward
+retention) next to the original importance bars.
 
 ---
 
@@ -208,8 +212,9 @@ pytest -q
 
 The suite is hermetic (no network, no pre-trained artifact): it covers the response
 contract, input validation, drift/retrain endpoints, the SHAP helper layer
-(list / 2-D / 3-D SHAP value normalisation) and the AutoML serving path (a tiny
-pipeline is built on the fly).
+(list / 2-D / 3-D SHAP value normalisation), the AutoML serving path (a tiny
+pipeline is built on the fly), the Prometheus endpoint, the model card, and the
+Optuna/leakage-probe helpers.
 
 ## Docker
 
@@ -217,6 +222,7 @@ pipeline is built on the fly).
 docker build -t churn-api ./backend
 docker run -p 8000:8000 churn-api
 curl http://localhost:8000/model-info
+curl http://localhost:8000/metrics
 ```
 
 The image is multi-stage:
@@ -227,12 +233,31 @@ The image is multi-stage:
   runs as uid 1001, exposes a Python-based `HEALTHCHECK` (no `curl` needed, so no
   extra apt packages).
 
+## Kubernetes and Terraform
+
+```bash
+# after pushing the image to your registry
+kubectl apply -f k8s/deployment.yaml -f k8s/service.yaml
+kubectl get pods -l app.kubernetes.io/name=churnguard-api   # 2 replicas
+
+cd terraform
+terraform init
+terraform plan -var="acr_name=<globally-unique-name>" -out tfplan
+terraform apply tfplan
+```
+
+`k8s/deployment.yaml` runs two replicas with readiness (`/model-info`) and liveness
+(`/`) probes, non-root security context and resource limits.
+`terraform/main.tf` creates the Azure Resource Group and Container Registry and
+outputs the ACR login server.
+
 ## CI/CD
 
 `.github/workflows/deploy.yml`:
 
 * `ci` job (every push + PR): installs `requirements-dev.txt`, runs `flake8`
-  (blocking - a style error fails the build) and `pytest`.
+  (blocking - a style error fails the build) and `pytest`, **before** the Docker
+  build.
 * `deploy` job (`needs: ci`, skipped on PRs): builds the image, pushes it to ACR,
   recreates the Azure Container Instance, and writes the public API URL to the
   workflow summary.
@@ -244,18 +269,22 @@ Required repository secrets: `ACR_NAME`, `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`,
 
 ```
 backend/
-  main.py                    FastAPI app (AutoML + SHAP serving, drift, retrain)
-  train.py                   AutoML comparison, checks, SHAP plots, artifact export
+  main.py                    FastAPI app (AutoML + SHAP serving, /model-card, /metrics)
+  train.py                   Optuna + PyCaret + FLAML, leakage probe, SHAP, validation
   xai.py                     SHAP helpers (shape normalisation, aggregation)
   conftest.py                pytest path/env setup
-  tests/                     API + SHAP helper tests
+  tests/                     API + SHAP helper + training helper tests
   Dockerfile                 multi-stage runtime image
   .flake8                    static analysis config
   requirements*.txt          runtime / train / dev dependency sets
   models/                    exported pipeline + model card
   reports/                   SHAP figures + metrics.json
 frontend/                    React + Vite single-page UI
-docs/REPORT.md               report pack mapped to the rubric
+  src/App.jsx                prediction form, importance bars, SHAP force plot
+docs/REPORT.md               3-page report pack mapped to the rubric
+docs/build_report.py         renders docs/ChurnGuard_Report.pdf from real artifacts
+k8s/                         Deployment (replicas: 2) + LoadBalancer Service
+terraform/                   Azure Resource Group + Container Registry
 .github/workflows/deploy.yml CI (lint + tests) then CD (ACR + ACI)
 ```
 
