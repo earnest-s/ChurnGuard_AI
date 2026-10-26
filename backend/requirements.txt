@@ -1,7 +1,14 @@
-fastapi
-uvicorn
-scikit-learn
-numpy
-pydantic
-pandas
-joblib
+# Runtime dependencies for the FastAPI service.
+#
+# Deliberately small: the AutoML search engine (PyCaret), the plotting stack
+# (matplotlib) and the optional xgboost candidate live in requirements-train.txt
+# and never ship to production. The exported model is a plain scikit-learn
+# pipeline, so the image only needs scikit-learn + SHAP.
+fastapi==0.109.0
+uvicorn==0.27.0
+pydantic==2.6.0
+numpy==1.26.4
+pandas==2.1.4
+scikit-learn==1.4.2
+joblib==1.4.2
+shap==0.44.0

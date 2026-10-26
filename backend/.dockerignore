@@ -1,0 +1,27 @@
+# Keep the build context small and reproducible.
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+.coverage
+htmlcov/
+
+# Not needed at runtime
+tests/
+reports/
+requirements-train.txt
+requirements-dev.txt
+.flake8
+
+# Local data / logs (the container creates these at start)
+data/*.csv
+
+# Tooling metadata
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+README.md
