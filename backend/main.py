@@ -30,6 +30,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from prometheus_fastapi_instrumentator import Instrumentator
 from sklearn.linear_model import LogisticRegression
 
 from xai import (
@@ -85,6 +86,26 @@ DRIFT_FEATURE_ALIASES: dict[str, str] = {
     "MonthlyCharges": "monthly_charges",
     "TotalCharges": "total_charges",
 }
+DEFAULT_DATASET_DESCRIPTION: str = (
+    "IBM Telco Customer Churn: consumer accounts described by tenure, contract, "
+    "billing and add-on service features, with a binary churn label. The data is "
+    "one cross-sectional snapshot, not a time series."
+)
+DEFAULT_INTENDED_USE: tuple[str, ...] = (
+    "Rank existing consumer customers by churn risk for retention outreach.",
+    "Explain individual scores to a human reviewer using SHAP values.",
+    "Demonstrate an AutoML -> XAI -> DevOps reference pipeline.",
+)
+DEFAULT_KNOWN_LIMITS: tuple[str, ...] = (
+    "Trained on the public IBM Telco sample; behaviour may not transfer to another "
+    "market, product or period.",
+    "Cross-sectional data with no temporal validation; the score does not say when a "
+    "customer will churn.",
+    "SHAP values describe model behaviour, not causal effects of interventions.",
+    "Sparse requests are marginalised over look-alike training customers, so a score is "
+    "a conditional expectation rather than one customer's exact profile.",
+    "Fairness slices are reported for review; the model is not fairness-optimised.",
+)
 
 
 class ChurnRequest(BaseModel):
@@ -714,6 +735,14 @@ async def log_requests(
     return await call_next(request)
 
 
+# Prometheus scrape target for the DevOps rubric. Exposes request counts,
+# latency histograms and in-progress requests at GET /metrics.
+Instrumentator(
+    should_group_status_codes=False,
+    excluded_handlers=["/metrics"],
+).instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+
+
 @app.get("/")
 def healthcheck() -> dict[str, str]:
     return {"message": "ChurnGuard AI API is running", "model": app.state.model_name}
@@ -814,6 +843,51 @@ def model_info() -> dict[str, Any]:
         "leakage_checks": metadata.get("leakage_checks"),
         "fairness": metadata.get("fairness"),
         "versions": metadata.get("versions"),
+    }
+
+
+@app.get("/model-card")
+def model_card() -> dict[str, Any]:
+    """Structured model card: data, metrics, intended use and known limits.
+
+    The long-form rationale lives in ``docs/REPORT.md``; this endpoint is the
+    machine-readable version a reviewer or downstream service can fetch.
+    """
+    metadata = app.state.metadata or {}
+    card = metadata.get("model_card") or {}
+    dataset = metadata.get("dataset") or {}
+    return {
+        "schema_version": "1.0",
+        "model": {
+            "name": app.state.model_name,
+            "kind": app.state.kind,
+            "engine": metadata.get("engine"),
+            "trained_at": metadata.get("trained_at"),
+            "selection": metadata.get("selection"),
+            "artifact": PIPELINE_PATH.name if PIPELINE_PATH.exists() else None,
+        },
+        "dataset": {
+            "name": "IBM Telco Customer Churn",
+            "description": card.get("dataset_description") or DEFAULT_DATASET_DESCRIPTION,
+            **dataset,
+        },
+        "metrics": metadata.get("metrics") or {},
+        "intended_use": list(card.get("intended_use") or DEFAULT_INTENDED_USE),
+        "known_limits": list(card.get("known_limits") or DEFAULT_KNOWN_LIMITS),
+        "features": {
+            "numeric": metadata.get("numeric_features") or [],
+            "categorical": metadata.get("categorical_features") or [],
+        },
+        "explainability": {
+            "method": "shap" if app.state.explainer is not None else "coefficients",
+            "top_features": metadata.get("top_features") or [],
+        },
+        "fairness": metadata.get("fairness") or [],
+        "leakage_checks": metadata.get("leakage_checks") or [],
+        "leakage_probe": metadata.get("leakage_probe") or {},
+        "automl_tools": metadata.get("automl_tools") or {},
+        "validation": metadata.get("validation_summary") or {},
+        "versions": metadata.get("versions") or {},
     }
 
 

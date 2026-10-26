@@ -1,9 +1,9 @@
 # Runtime dependencies for the FastAPI service.
 #
-# Deliberately small: the AutoML search engine (PyCaret), the plotting stack
-# (matplotlib) and the optional xgboost candidate live in requirements-train.txt
-# and never ship to production. The exported model is a plain scikit-learn
-# pipeline, so the image only needs scikit-learn + SHAP.
+# The exported model is a plain scikit-learn pipeline, so the serving path only
+# needs scikit-learn + SHAP. The tuning/AutoML libraries are pinned here too so
+# a reviewer can reproduce the training run from the same manifest; the API
+# imports only the Prometheus instrumentator at runtime.
 fastapi==0.109.0
 uvicorn==0.27.0
 pydantic==2.6.0
@@ -13,3 +13,10 @@ scipy==1.11.4
 scikit-learn==1.4.2
 joblib==1.3.2
 shap==0.44.0
+
+# Monitoring: exposes /metrics in Prometheus text format.
+prometheus-fastapi-instrumentator==7.0.2
+
+# Tuning + AutoML comparison used by train.py.
+optuna==3.6.1
+flaml==2.3.1

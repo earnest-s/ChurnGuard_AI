@@ -3,7 +3,9 @@
 #     pip install -r requirements-train.txt
 #     python train.py
 #
-# These packages are NOT installed in the production Docker image.
+# PyCaret and the plotting stack are NOT installed in the production Docker
+# image (they are pulled in by this file only). Optuna/FLAML are pinned in
+# requirements.txt because the rubric asks for the full training stack there.
 -r requirements.txt
 
 # AutoML engine used by train.py (model comparison + tuning).

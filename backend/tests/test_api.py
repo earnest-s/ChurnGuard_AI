@@ -42,6 +42,14 @@ def test_health(client: TestClient) -> None:
     assert "model" in body
 
 
+def test_prometheus_metrics_endpoint(client: TestClient) -> None:
+    client.get("/")
+    response = client.get("/metrics")
+    assert response.status_code == 200
+    assert "http_requests_total" in response.text
+    assert "http_request_duration_seconds" in response.text
+
+
 def test_predict_returns_frontend_contract(client: TestClient) -> None:
     response = client.post("/predict", json=VALID_PAYLOAD)
     assert response.status_code == 200
@@ -268,6 +276,22 @@ def test_automl_artifact_serves_shap_explanations(tmp_path, monkeypatch) -> None
     # Unspecified inputs are reported back so the caller knows what was inferred.
     assert body["assumed_features"] == ["PaymentMethod"]
     assert body["aggregation"] == {"method": "neighbour_average", "rows": 25}
+
+    with TestClient(reloaded.app) as client:
+        card = client.get("/model-card")
+        assert card.status_code == 200
+        card_body = card.json()
+        assert card_body["model"]["kind"] == "automl"
+        assert card_body["model"]["name"] == "RandomForestClassifier"
+        assert card_body["dataset"]["name"] == "IBM Telco Customer Churn"
+        assert card_body["dataset"]["description"]
+        assert card_body["metrics"]["automl"]["f1"] == 0.8
+        assert card_body["intended_use"] and card_body["known_limits"]
+        assert card_body["features"]["numeric"]
+
+        metrics = client.get("/metrics")
+        assert metrics.status_code == 200
+        assert "http_requests_total" in metrics.text
 
     with TestClient(reloaded.app) as client:
         retrain = client.post("/retrain")

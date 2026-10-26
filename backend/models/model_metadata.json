@@ -1,7 +1,7 @@
 {
-  "trained_at": "2026-10-26T16:41:06+00:00",
+  "trained_at": "2026-10-26T17:30:32+00:00",
   "model_name": "LogisticRegression",
-  "engine": "pycaret",
+  "engine": "sklearn",
   "selection": "tuned ({'model__C': 10.0}) - validation F1 0.5642",
   "validation": {
     "split_size": 0.2,
@@ -24,34 +24,44 @@
   },
   "metrics": {
     "baseline": {
-      "cv_f1_mean": 0.596,
-      "cv_f1_std": 0.0224,
-      "f1": 0.6099,
-      "precision": 0.6495,
-      "recall": 0.5749,
-      "roc_auc": 0.8359,
-      "accuracy": 0.8045
+      "method": "Optuna (2 trials, 0.8s)",
+      "cv_f1_mean": 0.6275,
+      "cv_f1_std": 0.0051,
+      "untuned": {
+        "cv_f1_mean": 0.596,
+        "cv_f1_std": 0.0224,
+        "f1": 0.6099,
+        "precision": 0.6495,
+        "recall": 0.5749,
+        "roc_auc": 0.8359,
+        "accuracy": 0.8045
+      },
+      "f1": 0.6093,
+      "precision": 0.4975,
+      "recall": 0.7861,
+      "roc_auc": 0.8336,
+      "accuracy": 0.7321
     },
     "automl": {
       "cv_f1_mean": 0.5951,
       "cv_f1_std": 0.0216,
-      "pycaret_holdout_f1": 0.6071,
+      "pycaret_holdout_f1": null,
       "f1": 0.6054,
       "precision": 0.6426,
       "recall": 0.5722,
       "roc_auc": 0.8353,
       "accuracy": 0.8017
     },
-    "f1_improvement_over_baseline": -0.0045
+    "f1_improvement_over_baseline": -0.0039
   },
   "comparison": [
     {
-      "model": "Baseline LogisticRegression",
-      "cv_f1_mean": 0.596,
-      "holdout_f1": 0.6099,
-      "precision": 0.6495,
-      "recall": 0.5749,
-      "roc_auc": 0.8359
+      "model": "Baseline LogisticRegression (Optuna)",
+      "cv_f1_mean": 0.6275,
+      "holdout_f1": 0.6093,
+      "precision": 0.4975,
+      "recall": 0.7861,
+      "roc_auc": 0.8336
     },
     {
       "model": "AutoML winner (LogisticRegression)",
@@ -62,63 +72,121 @@
       "roc_auc": 0.8353
     }
   ],
-  "automl_leaderboard": [
+  "tool_comparison": [
     {
-      "model": "Logistic Regression",
-      "accuracy": 0.8027,
-      "auc": 0.8468,
-      "recall": 0.5485,
-      "precision": 0.6534,
-      "f1": 0.5964,
-      "kappa": 0.4671,
-      "mcc": 0.4702,
-      "tt_sec": 1.9633
+      "tool": "Optuna (baseline LR)",
+      "budget_s": 5.0,
+      "holdout_f1": 0.6093,
+      "notes": "Optuna (2 trials, 0.8s)"
     },
     {
-      "model": "Gradient Boosting Classifier",
-      "accuracy": 0.8009,
-      "auc": 0.8453,
-      "recall": 0.5358,
-      "precision": 0.653,
-      "f1": 0.5886,
-      "kappa": 0.4589,
-      "mcc": 0.4629,
-      "tt_sec": 0.5433
+      "tool": "PyCaret",
+      "budget_s": "n/a",
+      "holdout_f1": "n/a",
+      "notes": "unavailable"
     },
     {
-      "model": "Random Forest Classifier",
-      "accuracy": 0.7899,
-      "auc": 0.8282,
-      "recall": 0.499,
-      "precision": 0.6329,
-      "f1": 0.558,
-      "kappa": 0.4227,
-      "mcc": 0.4278,
-      "tt_sec": 2.2533
-    },
-    {
-      "model": "Extra Trees Classifier",
-      "accuracy": 0.7815,
-      "auc": 0.8045,
-      "recall": 0.495,
-      "precision": 0.61,
-      "f1": 0.5465,
-      "kappa": 0.4046,
-      "mcc": 0.4084,
-      "tt_sec": 2.04
-    },
-    {
-      "model": "Decision Tree Classifier",
-      "accuracy": 0.7301,
-      "auc": 0.6637,
-      "recall": 0.5217,
-      "precision": 0.493,
-      "f1": 0.5068,
-      "kappa": 0.3213,
-      "mcc": 0.3217,
-      "tt_sec": 1.1067
+      "tool": "FLAML",
+      "budget_s": "n/a",
+      "holdout_f1": "n/a",
+      "notes": "unavailable"
     }
   ],
+  "automl_tools": {
+    "optuna": {
+      "best_params": {
+        "C": "0.0060252157362038605",
+        "class_weight": "balanced",
+        "fit_intercept": "False"
+      },
+      "cv_f1_mean": 0.6275,
+      "cv_f1_std": 0.0051,
+      "n_trials": 2,
+      "requested_trials": 2,
+      "elapsed_seconds": 0.8,
+      "timeout_seconds": 5.0,
+      "completed": true
+    },
+    "pycaret": null,
+    "flaml": null
+  },
+  "automl_leaderboard": [
+    {
+      "model": "LogisticRegression",
+      "cv_f1_mean": 0.596,
+      "cv_f1_std": 0.0224
+    },
+    {
+      "model": "RandomForest",
+      "cv_f1_mean": 0.582,
+      "cv_f1_std": 0.0185
+    },
+    {
+      "model": "DecisionTree",
+      "cv_f1_mean": 0.5679,
+      "cv_f1_std": 0.0346
+    }
+  ],
+  "leakage_probe": {
+    "feature": "future_churn_indicator",
+    "leaky_f1": 1.0,
+    "clean_f1": 0.6099,
+    "detected": true,
+    "dropped": true,
+    "note": "Synthetic label copy used only for the probe; never part of the deployed features."
+  },
+  "model_card": {
+    "dataset_description": "IBM Telco Customer Churn: consumer accounts described by tenure, contract, billing and add-on service features, with a binary churn label. The data is one cross-sectional snapshot, not a time series.",
+    "intended_use": [
+      "Rank existing consumer customers by churn risk for retention outreach.",
+      "Explain individual scores to a human reviewer using SHAP values.",
+      "Demonstrate an AutoML -> XAI -> DevOps reference pipeline."
+    ],
+    "known_limits": [
+      "Trained on the public IBM Telco sample; behaviour may not transfer to another market, product or period.",
+      "Cross-sectional data with no temporal validation; the score does not say when a customer will churn.",
+      "SHAP values describe model behaviour, not causal effects of interventions.",
+      "Sparse requests are marginalised over look-alike training customers, so a score is a conditional expectation rather than one customer's exact profile.",
+      "Fairness slices are reported for review; the model is not fairness-optimised."
+    ]
+  },
+  "validation_summary": {
+    "checks": [
+      {
+        "check": "Optuna Bayesian Optimization completed.",
+        "passed": true,
+        "detail": "2 trials, best CV F1 0.6275, 0.8s"
+      },
+      {
+        "check": "FLAML vs PyCaret comparison completed.",
+        "passed": false,
+        "detail": "One of the AutoML engines did not complete"
+      },
+      {
+        "check": "Deliberate Leakage test detected and feature dropped.",
+        "passed": true,
+        "detail": "leaky F1=1.0000, clean F1=0.6099"
+      },
+      {
+        "check": "SHAP plots generated in reports/.",
+        "passed": true,
+        "detail": "shap_summary_bar.png, shap_beeswarm.png, shap_waterfall_high_risk.png, shap_force_plot.png"
+      },
+      {
+        "check": "/metrics and /model-card endpoints added to FastAPI.",
+        "passed": true,
+        "detail": "main.py exposes both routes and instruments Prometheus metrics"
+      },
+      {
+        "check": "K8s and Terraform files exist.",
+        "passed": true,
+        "detail": "k8s/deployment.yaml, k8s/service.yaml, terraform/main.tf, multi-stage Dockerfile"
+      }
+    ],
+    "passed": false,
+    "passed_count": 5,
+    "total": 6
+  },
   "numeric_features": [
     "tenure",
     "MonthlyCharges",
@@ -318,7 +386,8 @@
     "plots": [
       "shap_summary_bar.png",
       "shap_beeswarm.png",
-      "shap_waterfall_high_risk.png"
+      "shap_waterfall_high_risk.png",
+      "shap_force_plot.png"
     ]
   },
   "leakage_checks": [
@@ -350,6 +419,11 @@
     {
       "check": "Class balance",
       "detail": "churn rate = 0.266 (1869 churn / 5163 retained), handled with stratified splits and F1 as the primary metric.",
+      "status": "pass"
+    },
+    {
+      "check": "Deliberate leakage probe",
+      "detail": "A synthetic 'future_churn_indicator' column copied the label and scored F1 = 1.0000; the probe was dropped before training (clean F1 = 0.6099).",
       "status": "pass"
     }
   ],
@@ -391,6 +465,9 @@
     "python": "3.11.15",
     "scikit_learn": "1.4.2",
     "pandas": "2.1.4",
-    "numpy": "1.26.4"
+    "numpy": "1.26.4",
+    "optuna": "3.6.1",
+    "flaml": "2.3.1",
+    "prometheus_fastapi_instrumentator": "7.0.2"
   }
 }

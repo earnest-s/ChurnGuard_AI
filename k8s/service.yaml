@@ -1,0 +1,21 @@
+# ChurnGuard AI API - Kubernetes Service
+#
+# LoadBalancer exposes port 80 and routes to the container's port 8000.
+# On AKS the public IP is assigned by the cloud controller; on a local cluster
+# use `kubectl port-forward svc/churnguard-api 8000:80` instead.
+apiVersion: v1
+kind: Service
+metadata:
+  name: churnguard-api
+  labels:
+    app.kubernetes.io/name: churnguard-api
+    app.kubernetes.io/part-of: churnguard-ai
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: churnguard-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http

@@ -1,0 +1,67 @@
+# ChurnGuard AI API - Kubernetes Deployment
+#
+# Two replicas give the service a rolling update with no gap in availability.
+# The image is the one built from backend/Dockerfile (multi-stage, non-root).
+# Replace the image reference with your registry, e.g.
+#   az acr build -r <acr> -t churn-api:latest ./backend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: churnguard-api
+  labels:
+    app.kubernetes.io/name: churnguard-api
+    app.kubernetes.io/part-of: churnguard-ai
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: churnguard-api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: churnguard-api
+        app.kubernetes.io/part-of: churnguard-ai
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+      containers:
+        - name: api
+          image: churnguardacr.azurecr.io/churn-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: CHURNGUARD_MODEL_DIR
+              value: /app/models
+            - name: CHURNGUARD_DATA_DIR
+              value: /app/data
+          readinessProbe:
+            httpGet:
+              path: /model-info
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
