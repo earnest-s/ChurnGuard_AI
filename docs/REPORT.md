@@ -114,7 +114,7 @@ top features. Plus `GET /drift-status`.
 **Caption**
 
 > The CI job installs `requirements-dev.txt`, runs flake8 (fails the build on any
-> style error) and runs the pytest suite (14 tests covering the response contract,
+> style error) and runs the pytest suite (22 tests covering the response contract,
 > input validation, the retrain endpoint and the SHAP serving path) before the
 > deploy job is allowed to start. Deployment builds a multi-stage image: stage 1
 > installs pinned dependencies into a virtualenv with the build toolchain, stage 2

@@ -29,7 +29,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sklearn.linear_model import LogisticRegression
 
 from xai import (
@@ -137,6 +137,9 @@ class Factor(BaseModel):
 
 
 class ChurnResponse(BaseModel):
+    # ``model_name`` would otherwise collide with pydantic's protected "model_" namespace.
+    model_config = ConfigDict(protected_namespaces=())
+
     churn_probability: float
     prediction: Literal["High Risk", "Low Risk"]
     feature_importance: dict[str, float]
