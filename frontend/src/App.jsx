@@ -128,6 +128,10 @@ export default function App() {
         explanation: typeof data.explanation === 'string' ? data.explanation : '',
         modelName: typeof data.model_name === 'string' ? data.model_name : '',
         xaiMethod: typeof data.xai_method === 'string' ? data.xai_method : '',
+        assumedFeatures:
+          data.assumed_features && typeof data.assumed_features === 'object'
+            ? data.assumed_features
+            : {},
       })
     } catch (err) {
       setError(err.message || 'Something went wrong while predicting churn.')
@@ -184,8 +188,13 @@ export default function App() {
     ['', -Infinity],
   )
 
+  const assumedEntries = result?.assumedFeatures
+    ? Object.entries(result.assumedFeatures).sort((a, b) => a[0].localeCompare(b[0]))
+    : []
+
   const toLabel = (name) =>
     name
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
       .split('_')
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ')
@@ -256,6 +265,32 @@ export default function App() {
             {loading ? 'Predicting...' : 'Predict Churn'}
           </button>
         </form>
+
+        <details className="advanced">
+          <summary>Optional customer profile</summary>
+          <p className="advanced-hint">
+            Anything left blank uses the model&apos;s reference customer (a real training
+            customer at the portfolio churn rate). The response lists what was assumed.
+          </p>
+          <div className="advanced-grid">
+            {ADVANCED_FIELDS.map(({ name, label, options }) => (
+              <label key={name}>
+                <span>{label}</span>
+                <select name={name} value={formData[name]} onChange={handleChange}>
+                  <option value="">Model default</option>
+                  {options.map((option) => {
+                    const [value, text] = Array.isArray(option) ? option : [option, option]
+                    return (
+                      <option key={value} value={value}>
+                        {text}
+                      </option>
+                    )
+                  })}
+                </select>
+              </label>
+            ))}
+          </div>
+        </details>
 
         {error && <p className="error">{error}</p>}
 
