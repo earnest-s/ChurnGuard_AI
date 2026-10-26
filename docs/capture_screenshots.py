@@ -58,6 +58,42 @@ def _full_page(driver: webdriver.Chrome, path: Path) -> None:
     print(f"wrote {path} ({path.stat().st_size // 1024} KiB)")
 
 
+def _result_clip(driver: webdriver.Chrome) -> dict | None:
+    """Bounding box from the verdict panel through the SHAP force plot."""
+    return driver.execute_script(
+        """
+        const start = document.querySelector('.result');
+        const end = document.querySelector('.force-plot');
+        if (!start || !end) return null;
+        const sr = start.getBoundingClientRect();
+        const er = end.getBoundingClientRect();
+        const left = Math.min(sr.left, er.left) + window.scrollX;
+        const right = Math.max(sr.right, er.right) + window.scrollX;
+        const top = sr.top + window.scrollY;
+        const bottom = er.bottom + window.scrollY;
+        return {
+          x: Math.max(0, left - 8),
+          y: Math.max(0, top - 8),
+          width: right - left + 16,
+          height: bottom - top + 16,
+        };
+        """
+    )
+
+
+def _clip_shot(driver: webdriver.Chrome, path: Path, clip: dict) -> None:
+    shot = driver.execute_cdp_cmd(
+        "Page.captureScreenshot",
+        {
+            "format": "png",
+            "captureBeyondViewport": True,
+            "clip": {**clip, "scale": 2},
+        },
+    )
+    path.write_bytes(base64.b64decode(shot["data"]))
+    print(f"wrote {path} ({path.stat().st_size // 1024} KiB, {clip['width']}x{clip['height']} css)")
+
+
 def capture_gui() -> None:
     driver = _driver()
     try:
@@ -92,7 +128,12 @@ def capture_gui() -> None:
         verdict = driver.find_element(By.CSS_SELECTOR, ".result h2").text
         probability = driver.find_element(By.CSS_SELECTOR, ".result p").text
         print(f"GUI prediction: {verdict} | {probability}")
-        _full_page(driver, ASSETS / "gui_prediction.png")
+
+        _full_page(driver, ASSETS / "gui_full_page.png")
+        clip = _result_clip(driver)
+        if not clip:
+            raise RuntimeError("Could not locate the result panel")
+        _clip_shot(driver, ASSETS / "gui_prediction.png", clip)
     finally:
         driver.quit()
 
