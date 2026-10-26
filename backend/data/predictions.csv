@@ -6,3 +6,4 @@ timestamp,tenure,monthly_charges,contract_type,support_calls,churn_probability,p
 2026-04-09T17:19:13.663418+00:00,2.0,26.0,1,23,0.9957,High Risk
 2026-10-26T16:25:08.606288+00:00,2.0,95.0,0,0,0.3331,Low Risk,LogisticRegression
 2026-10-26T16:25:08.610869+00:00,68.0,25.0,2,0,0.2257,Low Risk,LogisticRegression
+2026-10-26T17:41:56.953270+00:00,2.0,95.0,0,4,0.7428,High Risk,LogisticRegression
