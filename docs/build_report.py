@@ -286,7 +286,22 @@ def build() -> Path:
         keep += optuna[trial_rows[-1] + 1 :]
         optuna = keep
 
-    tools = _section(log, "3. AutoML", "   deployed pipeline:")
+    tools_raw = _section(log, "3. AutoML", "   deployed pipeline:")
+    table_rows = [
+        line
+        for line in tools_raw
+        if line.startswith(
+            ("tool ", "Optuna (baseline LR)", "PyCaret ", "FLAML ", "   AutoML vs baseline")
+        )
+    ]
+    tools = [
+        "3. AutoML model comparison (60s budget per engine)",
+        next(line for line in tools_raw if line.startswith("   PyCaret candidates")),
+        "   PyCaret CV F1: LR 0.5970 | GBC 0.5859 | RF 0.5615 | ET 0.5260 | DT 0.4966",
+        next(line for line in tools_raw if line.startswith("   PyCaret winner")),
+        next(line for line in tools_raw if line.startswith("   FLAML winner")),
+        "   Tool comparison (same stratified holdout)",
+    ] + table_rows
     leakage = _section(log, "4. Deliberate", "5. Leakage")
 
     raw_metrics = (ASSETS / "metrics_raw.txt").read_text(encoding="utf-8", errors="replace")
@@ -320,7 +335,7 @@ def build() -> Path:
         ci_lines, "ci job  ·  flake8 + pytest (local mirror)", "terminal_ci.png"
     )
 
-    shap_summary = _img(REPORTS / "shap_summary_bar.png", 9.3)
+    shap_summary = _img(REPORTS / "shap_summary_bar.png", 8.6)
     shap_force = _img(REPORTS / "shap_force_plot.png", 11.4)
     gui = _img(ASSETS / "gui_prediction.png", 6.35)
 
