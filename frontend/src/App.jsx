@@ -128,10 +128,9 @@ export default function App() {
         explanation: typeof data.explanation === 'string' ? data.explanation : '',
         modelName: typeof data.model_name === 'string' ? data.model_name : '',
         xaiMethod: typeof data.xai_method === 'string' ? data.xai_method : '',
-        assumedFeatures:
-          data.assumed_features && typeof data.assumed_features === 'object'
-            ? data.assumed_features
-            : {},
+        assumedFeatures: Array.isArray(data.assumed_features) ? data.assumed_features : [],
+        aggregation:
+          data.aggregation && typeof data.aggregation === 'object' ? data.aggregation : {},
       })
     } catch (err) {
       setError(err.message || 'Something went wrong while predicting churn.')
@@ -188,9 +187,8 @@ export default function App() {
     ['', -Infinity],
   )
 
-  const assumedEntries = result?.assumedFeatures
-    ? Object.entries(result.assumedFeatures).sort((a, b) => a[0].localeCompare(b[0]))
-    : []
+  const assumedEntries = result?.assumedFeatures ? result.assumedFeatures : []
+  const aggregation = result?.aggregation || {}
 
   const toLabel = (name) =>
     name
@@ -269,8 +267,8 @@ export default function App() {
         <details className="advanced">
           <summary>Optional customer profile</summary>
           <p className="advanced-hint">
-            Anything left blank uses the model&apos;s reference customer (a real training
-            customer at the portfolio churn rate). The response lists what was assumed.
+            Anything left blank is inferred: the score is averaged over the training customers
+            closest in tenure and monthly charges. The response lists which inputs were inferred.
           </p>
           <div className="advanced-grid">
             {ADVANCED_FIELDS.map(({ name, label, options }) => (
@@ -334,17 +332,16 @@ export default function App() {
 
               {assumedEntries.length > 0 && (
                 <div className="assumed">
-                  <p className="assumed-title">Assumed from the reference profile</p>
+                  <p className="assumed-title">Inferred inputs (not supplied)</p>
                   <ul className="assumed-list">
-                    {assumedEntries.map(([feature, value]) => (
-                      <li key={feature}>
-                        <span>{toLabel(feature)}</span>
-                        <strong>{String(value)}</strong>
-                      </li>
+                    {assumedEntries.map((feature) => (
+                      <li key={feature}>{toLabel(feature)}</li>
                     ))}
                   </ul>
                   <p className="assumed-note">
-                    These inputs were not supplied, so the explanation is conditioned on them.
+                    {aggregation.method === 'neighbour_average'
+                      ? `The score is the average over ${aggregation.rows} training customers closest in tenure and monthly charges, so these inputs are marginalised rather than guessed.`
+                      : 'The score uses the model’s reference customer for these inputs.'}
                   </p>
                 </div>
               )}

@@ -104,15 +104,20 @@ and the figures in `backend/reports/*.png`.
 > the three signed `top_factors`, and a generated English `explanation`. The React
 > front-end renders the ranking as a bar chart, so a retention agent can see *why*
 > a customer is flagged instead of only the score. The form takes the three
-> original fields plus an optional Telco profile; anything left blank is filled
-> from the model's reference customer and listed back under "Assumed from the
-> reference profile", so an explanation is never conditioned on invisible inputs.
+> original fields plus an optional Telco profile; anything left blank is
+> marginalised over the 100 nearest training customers in tenure / monthly charges,
+> and the response names those inferred inputs (`assumed_features`) together with
+> the aggregation used. Per-request SHAP values are averaged over the same rows, so
+> the bar chart explains the number that was actually returned.
 
 **Honesty note worth one sentence**
 
 > SHAP values explain the model, not causality: they show which inputs the model
 > relied on for this prediction, not what would happen to the customer if the
-> feature were changed.
+> feature were changed. Collinearity is visible here: `MonthlyCharges` carries a
+> negative conditional coefficient (-1.81) because it moves with `tenure` and
+> `TotalCharges`, so its SHAP values document the model's internal accounting
+> rather than a claim that raising a bill lowers churn risk.
 
 ---
 
@@ -131,7 +136,7 @@ top features. Plus `GET /drift-status`.
 **Caption**
 
 > The CI job installs `requirements-dev.txt`, runs flake8 (fails the build on any
-> style error) and runs the pytest suite (22 tests covering the response contract,
+> style error) and runs the pytest suite (32 tests covering the response contract,
 > input validation, the retrain endpoint and the SHAP serving path) before the
 > deploy job is allowed to start. Deployment builds a multi-stage image: stage 1
 > installs pinned dependencies into a virtualenv with the build toolchain, stage 2

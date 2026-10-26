@@ -33,7 +33,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sklearn.linear_model import LogisticRegression
 
 from xai import (
-    aggregate_to_raw_features,
+    average_absolute,
+    average_signed,
     build_explainer,
     explain_matrix,
     normalized_absolute,
@@ -54,6 +55,7 @@ def _env_path(variable: str, default: Path) -> Path:
 MODEL_DIR: Path = _env_path("CHURNGUARD_MODEL_DIR", BASE_DIR / "models")
 DATA_DIR: Path = _env_path("CHURNGUARD_DATA_DIR", BASE_DIR / "data")
 PIPELINE_PATH: Path = MODEL_DIR / "churn_pipeline.joblib"
+REFERENCE_ROWS_PATH: Path = MODEL_DIR / "reference_rows.joblib"
 METADATA_PATH: Path = MODEL_DIR / "model_metadata.json"
 PREDICTIONS_CSV_PATH: Path = DATA_DIR / "predictions.csv"
 
@@ -64,7 +66,10 @@ LEGACY_FEATURES: tuple[str, str, str, str] = (
     "support_calls",
 )
 DRIFT_THRESHOLD: float = 2.0
+DEFAULT_NEIGHBOURS: int = 100
 CONTRACT_BY_CODE: dict[int, str] = {0: "Month-to-month", 1: "One year", 2: "Two year"}
+#: Derived from other inputs, so it is computed rather than inferred from look-alikes.
+DERIVED_FEATURES: tuple[str, ...] = ("TotalCharges",)
 #: These services only exist when the customer has internet / phone service.
 INTERNET_DEPENDENT_FEATURES: tuple[str, ...] = (
     "OnlineSecurity",
@@ -171,9 +176,16 @@ class ChurnResponse(BaseModel):
     explanation: str
     model_name: str
     xai_method: str
-    assumed_features: dict[str, Any] = Field(
+    assumed_features: list[str] = Field(
+        default_factory=list,
+        description="Model inputs the caller did not supply, inferred from look-alike training rows.",
+    )
+    aggregation: dict[str, Any] = Field(
         default_factory=dict,
-        description="Raw model inputs the caller did not supply, filled from the reference profile.",
+        description=(
+            "How the score was produced: 'single_row' or 'neighbour_average', "
+            "with the number of rows averaged."
+        ),
     )
 
 
@@ -257,6 +269,22 @@ def _load_artifacts() -> tuple[Any | None, dict[str, Any] | None]:
     return pipeline, metadata
 
 
+def _load_reference_rows() -> pd.DataFrame | None:
+    """Training rows used to marginalise inputs the caller omitted (optional)."""
+    if not REFERENCE_ROWS_PATH.exists():
+        return None
+    try:
+        rows = joblib.load(REFERENCE_ROWS_PATH)
+    except Exception as exc:
+        logger.warning(
+            "Could not load reference rows (%s: %s). Falling back to a single reference profile.",
+            type(exc).__name__,
+            exc,
+        )
+        return None
+    return rows if isinstance(rows, pd.DataFrame) and not rows.empty else None
+
+
 def _explainer_for(pipeline: Any) -> Any | None:
     try:
         preprocessor = pipeline.named_steps["preprocess"]
@@ -324,14 +352,7 @@ def _supplied_features(payload: ChurnRequest) -> dict[str, Any]:
 
 
 def _enforce_profile_coherence(row: dict[str, Any]) -> None:
-    """Keep dependent services consistent with the parent service.
-
-    The Telco data only contains ``No internet service`` when
-    ``InternetService == "No"`` and ``No phone service`` when
-    ``PhoneService == "No"``. A caller (or a stale default) can otherwise
-    assemble a combination that never occurs, which the model would treat as an
-    unseen category.
-    """
+    """Keep dependent services consistent with the parent service (single row)."""
     internet = str(row.get("InternetService", ""))
     for column in INTERNET_DEPENDENT_FEATURES:
         if column not in row:
@@ -348,44 +369,120 @@ def _enforce_profile_coherence(row: dict[str, Any]) -> None:
             row["MultipleLines"] = "No"
 
 
-def _feature_row(
-    payload: ChurnRequest, metadata: dict[str, Any]
-) -> tuple[pd.DataFrame, dict[str, Any]]:
-    """Build one model row from the reference profile plus the caller's values.
+def _enforce_frame_coherence(rows: pd.DataFrame) -> None:
+    """Vectorised version of :func:`_enforce_profile_coherence`."""
+    if "InternetService" in rows.columns:
+        without_internet = rows["InternetService"].astype(str) == "No"
+        for column in INTERNET_DEPENDENT_FEATURES:
+            if column not in rows.columns:
+                continue
+            values = rows[column].astype(str)
+            rows.loc[without_internet, column] = "No internet service"
+            conflicting = ~without_internet & (values == "No internet service")
+            if conflicting.any():
+                rows.loc[conflicting, column] = "No"
 
-    Returns the DataFrame *and* the raw features that were assumed, so the API
-    can tell the caller exactly which inputs the explanation is conditioned on.
+    if "MultipleLines" in rows.columns and "PhoneService" in rows.columns:
+        without_phone = rows["PhoneService"].astype(str) == "No"
+        lines = rows["MultipleLines"].astype(str)
+        rows.loc[without_phone, "MultipleLines"] = "No phone service"
+        conflicting = ~without_phone & (lines == "No phone service")
+        if conflicting.any():
+            rows.loc[conflicting, "MultipleLines"] = "No"
+
+
+def _neighbour_rows(
+    reference_rows: pd.DataFrame,
+    payload: ChurnRequest,
+    raw_features: list[str],
+    metadata: dict[str, Any],
+) -> pd.DataFrame:
+    """Training customers closest to the request in tenure / monthly charges."""
+    missing = [column for column in raw_features if column not in reference_rows.columns]
+    if missing:
+        raise ValueError(f"Reference rows are missing: {', '.join(missing)}")
+
+    tenure = reference_rows["tenure"].astype(float)
+    charges = reference_rows["MonthlyCharges"].astype(float)
+    tenure_scale = max(float(tenure.std(ddof=0)), 1.0)
+    charge_scale = max(float(charges.std(ddof=0)), 1.0)
+    distance = ((tenure - float(payload.tenure)) / tenure_scale) ** 2 + (
+        (charges - float(payload.monthly_charges)) / charge_scale
+    ) ** 2
+
+    config = metadata.get("reference_rows") or {}
+    count = min(int(config.get("k_neighbours") or DEFAULT_NEIGHBOURS), len(reference_rows))
+    nearest = np.argsort(distance.to_numpy())[:count]
+    return reference_rows.iloc[nearest]
+
+
+def _feature_rows(
+    payload: ChurnRequest,
+    metadata: dict[str, Any],
+    reference_rows: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, list[str], str]:
+    """Rows to score, plus the inputs that had to be inferred and how.
+
+    Two strategies, both of which report what they assumed:
+
+    ``neighbour_average``
+        Omitted inputs are marginalised over the training customers closest to
+        the request in tenure / monthly charges (a soft
+        ``P(churn | supplied inputs)``). Used whenever the reference-rows
+        artifact is available.
+    ``single_row``
+        One coherent reference customer (metadata ``reference_profile``), used
+        when the artifact is missing, and whenever nothing but the derived
+        ``TotalCharges`` is unknown - in that case every row would be identical,
+        so averaging would only waste time.
     """
-    reference: dict[str, Any] = (
+    profile: dict[str, Any] = (
         (metadata.get("reference_profile") or {}).get("values")
         or metadata.get("feature_defaults")
         or {}
     )
-    raw_features = list(metadata.get("raw_features") or reference.keys())
+    raw_features = list(metadata.get("raw_features") or profile.keys())
     if not raw_features:
         raise ValueError("Model metadata does not list the raw feature columns.")
 
-    missing = [column for column in raw_features if column not in reference]
-    if missing:
-        raise ValueError(f"No reference value available for: {', '.join(missing)}")
-
     supplied = _supplied_features(payload)
-    row: dict[str, Any] = {column: reference[column] for column in raw_features}
-    row.update(supplied)
-    if "TotalCharges" in row:
-        row["TotalCharges"] = _total_charges(payload)
-    _enforce_profile_coherence(row)
+    # Derived columns are recomputed from the caller's inputs, not inferred from
+    # look-alikes, so they are never reported as assumptions.
+    assumed = [
+        column
+        for column in raw_features
+        if column not in supplied and column not in DERIVED_FEATURES
+    ]
+
+    if reference_rows is None or reference_rows.empty or not assumed:
+        missing = [column for column in assumed if column not in profile]
+        if missing:
+            raise ValueError(f"No reference value available for: {', '.join(missing)}")
+        rows = pd.DataFrame(
+            [{column: profile.get(column) for column in raw_features}], columns=raw_features
+        )
+        aggregation = "single_row"
+    else:
+        rows = _neighbour_rows(reference_rows, payload, raw_features, metadata)
+        rows = rows.loc[:, raw_features].copy()
+        aggregation = "neighbour_average"
+
+    for column, value in supplied.items():
+        if column in rows.columns:
+            rows[column] = value
+    if "TotalCharges" in rows.columns:
+        rows["TotalCharges"] = _total_charges(payload)
+    _enforce_frame_coherence(rows)
 
     # Training cast every categorical column to str; mirror that exactly here.
     for column in metadata.get("categorical_features", []):
-        if column in row:
-            row[column] = str(row[column])
+        if column in rows.columns:
+            rows[column] = rows[column].astype(str)
     for column in metadata.get("numeric_features", []):
-        if column in row:
-            row[column] = float(row[column])
+        if column in rows.columns:
+            rows[column] = rows[column].astype(float)
 
-    assumed = {column: row[column] for column in raw_features if column not in supplied}
-    return pd.DataFrame([row], columns=raw_features), assumed
+    return rows, assumed, aggregation
 
 
 def _drift_values(payload: ChurnRequest) -> dict[str, float]:
@@ -418,15 +515,25 @@ def _check_drift(
     return drift_found
 
 
-def _explain_text(factors: list[dict[str, Any]], method: str) -> str:
+def _explain_text(
+    factors: list[dict[str, Any]],
+    method: str,
+    aggregation: dict[str, Any] | None = None,
+) -> str:
     if not factors:
         return "No explanation available for this model."
     parts = [
         f"{factor['feature']} ({factor['contribution']:+.3f})" for factor in factors
     ]
-    lead = "SHAP drivers" if method == "shap" else "Model coefficients"
+    if (aggregation or {}).get("method") == "neighbour_average":
+        rows = int(aggregation.get("rows", 0))
+        lead = f"SHAP drivers averaged over {rows} similar customers"
+    elif method == "shap":
+        lead = "SHAP drivers for this customer"
+    else:
+        lead = "Model coefficients for this customer"
     return (
-        f"{lead} for this customer: " + ", ".join(parts) + ". "
+        f"{lead}: " + ", ".join(parts) + ". "
         "Positive values push the prediction toward churn, negative values away from it."
     )
 
@@ -434,21 +541,22 @@ def _explain_text(factors: list[dict[str, Any]], method: str) -> str:
 def _explain_automl(
     pipeline: Any,
     explainer: Any | None,
-    row: pd.DataFrame,
+    rows: pd.DataFrame,
     metadata: dict[str, Any],
 ) -> tuple[dict[str, float], list[dict[str, Any]], str]:
-    """Per-request SHAP values aggregated back to the raw input features."""
+    """Per-request SHAP values, averaged over the scored rows and aggregated back
+    to the raw input features."""
     if explainer is None:
         return {}, [], "unavailable"
     preprocessor = pipeline.named_steps["preprocess"]
-    matrix = np.asarray(preprocessor.transform(row), dtype=float)
-    values = explain_matrix(explainer, matrix)[0]
+    matrix = np.asarray(preprocessor.transform(rows), dtype=float)
+    values = explain_matrix(explainer, matrix)
     transformed_names = list(preprocessor.get_feature_names_out())
-    contributions = aggregate_to_raw_features(
-        values, transformed_names, metadata.get("raw_features") or []
-    )
-    factors = top_factors(contributions, limit=3)
-    return normalized_absolute(contributions), factors, "shap"
+    raw_features = metadata.get("raw_features") or []
+    drivers = average_signed(values, transformed_names, raw_features)
+    importance = average_absolute(values, transformed_names, raw_features)
+    factors = top_factors(drivers, limit=3)
+    return normalized_absolute(importance), factors, "shap"
 
 
 # ---------------------------------------------------------------------------
@@ -548,12 +656,14 @@ async def lifespan(app: FastAPI):
         app.state.metadata = metadata
         app.state.model_name = str(metadata.get("model_name", "automl"))
         app.state.explainer = _explainer_for(pipeline)
+        app.state.reference_rows = _load_reference_rows()
         app.state.baseline_stats = _metadata_stats(metadata)
         logger.info(
-            "Loaded AutoML pipeline '%s' (trained %s) with %s explainer",
+            "Loaded AutoML pipeline '%s' (trained %s) with %s explainer and %s reference rows",
             app.state.model_name,
             metadata.get("trained_at", "unknown"),
             "a SHAP" if app.state.explainer is not None else "no",
+            len(app.state.reference_rows) if app.state.reference_rows is not None else 0,
         )
     else:
         logger.warning(
@@ -565,6 +675,7 @@ async def lifespan(app: FastAPI):
         app.state.kind = "fallback"
         app.state.pipeline = None
         app.state.metadata = None
+        app.state.reference_rows = None
         app.state.model = _train_fallback_model()
         app.state.model_name = "baseline-logistic-regression"
         app.state.explainer = None
@@ -618,13 +729,16 @@ def predict(payload: ChurnRequest):
 
         if app.state.kind == "automl":
             metadata = app.state.metadata
-            row, assumed = _feature_row(payload, metadata)
-            probability = float(app.state.pipeline.predict_proba(row)[0][1])
-            importance, factors, method = _explain_automl(
-                app.state.pipeline, app.state.explainer, row, metadata
+            rows, assumed, aggregation_method = _feature_rows(
+                payload, metadata, app.state.reference_rows
             )
+            probability = float(np.mean(app.state.pipeline.predict_proba(rows)[:, 1]))
+            importance, factors, method = _explain_automl(
+                app.state.pipeline, app.state.explainer, rows, metadata
+            )
+            aggregation = {"method": aggregation_method, "rows": int(len(rows))}
         else:
-            assumed = {}
+            assumed, aggregation = [], {"method": "single_row", "rows": 1}
             model = app.state.model
             if model is None:
                 return JSONResponse(
@@ -648,7 +762,7 @@ def predict(payload: ChurnRequest):
             method = "coefficients"
 
         prediction = "High Risk" if probability >= 0.5 else "Low Risk"
-        explanation = _explain_text(factors, method)
+        explanation = _explain_text(factors, method, aggregation)
         _append_prediction_log(
             payload=payload,
             churn_probability=probability,
@@ -670,6 +784,7 @@ def predict(payload: ChurnRequest):
             model_name=app.state.model_name,
             xai_method=method,
             assumed_features=assumed,
+            aggregation=aggregation,
         )
     except Exception as exc:
         logger.exception("Prediction error")
@@ -694,6 +809,7 @@ def model_info() -> dict[str, Any]:
         "metrics": metadata.get("metrics"),
         "top_features": metadata.get("top_features"),
         "reference_profile": metadata.get("reference_profile"),
+        "reference_rows": metadata.get("reference_rows"),
         "feature_defaults": metadata.get("feature_defaults"),
         "leakage_checks": metadata.get("leakage_checks"),
         "fairness": metadata.get("fairness"),

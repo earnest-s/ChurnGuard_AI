@@ -142,6 +142,43 @@ def aggregate_to_raw_features(
     return totals
 
 
+def _aggregate_matrix(
+    values: Any,
+    transformed_names: Iterable[str],
+    raw_names: Iterable[str],
+    absolute: bool,
+) -> dict[str, float]:
+    """Average SHAP values per raw feature across the rows of a 2-D matrix."""
+    matrix = np.atleast_2d(np.asarray(values, dtype=float))
+    if absolute:
+        matrix = np.abs(matrix)
+    totals: dict[str, float] = {}
+    for column, name in enumerate(list(transformed_names)):
+        if column >= matrix.shape[1]:
+            break
+        source = source_feature(str(name), raw_names)
+        totals[source] = totals.get(source, 0.0) + float(matrix[:, column].mean())
+    return totals
+
+
+def average_signed(
+    values: Any,
+    transformed_names: Iterable[str],
+    raw_names: Iterable[str],
+) -> dict[str, float]:
+    """Mean signed SHAP contribution per raw feature (drivers of the mean prediction)."""
+    return _aggregate_matrix(values, transformed_names, raw_names, absolute=False)
+
+
+def average_absolute(
+    values: Any,
+    transformed_names: Iterable[str],
+    raw_names: Iterable[str],
+) -> dict[str, float]:
+    """Mean absolute SHAP value per raw feature (importance over several customers)."""
+    return _aggregate_matrix(values, transformed_names, raw_names, absolute=True)
+
+
 def normalized_absolute(contributions: Mapping[str, float]) -> dict[str, float]:
     """Absolute SHAP values scaled to sum to 1 (used for the API bar chart)."""
     magnitudes = {str(key): abs(float(value)) for key, value in contributions.items()}

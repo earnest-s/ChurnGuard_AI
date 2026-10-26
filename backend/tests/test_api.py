@@ -60,6 +60,8 @@ def test_predict_returns_frontend_contract(client: TestClient) -> None:
     assert body["explanation"]
     assert body["xai_method"] == "coefficients"
     assert body["model_name"]
+    assert body["assumed_features"] == []
+    assert body["aggregation"] == {"method": "single_row", "rows": 1}
 
 
 def test_predict_accepts_optional_telco_fields(client: TestClient) -> None:
@@ -201,6 +203,8 @@ def _write_artifacts(directory) -> tuple[pd.DataFrame, pd.Series, object, dict]:
 
     directory.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipeline, directory / "churn_pipeline.joblib")
+    neighbours = train.reference_rows(features, limit=60)
+    joblib.dump(neighbours, directory / "reference_rows.joblib")
     metadata = {
         "trained_at": "2026-01-01T00:00:00+00:00",
         "model_name": "RandomForestClassifier",
@@ -210,6 +214,13 @@ def _write_artifacts(directory) -> tuple[pd.DataFrame, pd.Series, object, dict]:
         "categorical_features": categorical,
         "feature_defaults": train.feature_defaults(features, numeric),
         "reference_profile": train.reference_profile(pipeline, features, target, numeric),
+        "reference_rows": {
+            "file": "reference_rows.joblib",
+            "rows": int(len(neighbours)),
+            "k_neighbours": 25,
+            "distance_features": ["tenure", "MonthlyCharges"],
+            "source": "training split",
+        },
         "training_stats": train.training_statistics(features, numeric),
         "top_features": [{"feature": "tenure", "importance": 0.5}],
         "metrics": {"automl": {"f1": 0.8}},
@@ -230,6 +241,7 @@ def test_automl_artifact_serves_shap_explanations(tmp_path, monkeypatch) -> None
         info = client.get("/model-info").json()
         assert info["model_kind"] == "automl"
         assert info["xai_method"] == "shap"
+        assert info["reference_rows"]["k_neighbours"] == 25
 
         response = client.post(
             "/predict",
@@ -247,14 +259,15 @@ def test_automl_artifact_serves_shap_explanations(tmp_path, monkeypatch) -> None
     assert body["xai_method"] == "shap"
     assert body["model_name"] == "RandomForestClassifier"
     assert len(body["top_factors"]) == 3
-    assert "SHAP drivers" in body["explanation"]
+    assert "similar customers" in body["explanation"]
     assert sum(body["feature_importance"].values()) == pytest.approx(1.0, abs=0.01)
     # Every reported feature must be a real input column of the trained model.
     assert set(body["feature_importance"]) <= set(
         reloaded.app.state.metadata["raw_features"]
     )
-    # Unspecified inputs are reported back so the caller knows what was assumed.
-    assert set(body["assumed_features"]) == {"TotalCharges", "PaymentMethod"}
+    # Unspecified inputs are reported back so the caller knows what was inferred.
+    assert body["assumed_features"] == ["PaymentMethod"]
+    assert body["aggregation"] == {"method": "neighbour_average", "rows": 25}
 
     with TestClient(reloaded.app) as client:
         retrain = client.post("/retrain")
@@ -308,26 +321,61 @@ def test_reference_profile_picks_the_row_nearest_the_base_rate() -> None:
     assert profile["values"]["Contract"] == "One year"
 
 
-def test_feature_row_falls_back_to_the_reference_profile(tmp_path) -> None:
-    output = _write_artifacts(tmp_path / "models")
-    features, _, _, metadata = output
+def test_missing_inputs_are_marginalised_over_neighbours(tmp_path) -> None:
+    features, _, pipeline, metadata = _write_artifacts(tmp_path / "models")
+    reference_rows = joblib.load(tmp_path / "models" / "reference_rows.joblib")
+
+    payload = api.ChurnRequest(tenure=5, monthly_charges=60.0, contract_type=0)
+    rows, assumed, aggregation = api._feature_rows(payload, metadata, reference_rows)
+
+    assert aggregation == "neighbour_average"
+    assert len(rows) == metadata["reference_rows"]["k_neighbours"]
+    assert "PaymentMethod" in assumed and "TotalCharges" not in assumed
+    assert "tenure" not in assumed
+
+    # Supplied values win on every row and the derived total stays consistent.
+    assert np.allclose(rows["tenure"].to_numpy(), 5.0)
+    assert np.allclose(rows["MonthlyCharges"].to_numpy(), 60.0)
+    assert (rows["Contract"] == "Month-to-month").all()
+    assert np.allclose(rows["TotalCharges"].to_numpy(), 300.0)
+
+    # The neighbourhood is local: selected rows are closer to the request than
+    # the rows that were left out.
+    distance = ((reference_rows["tenure"] - 5.0) / reference_rows["tenure"].std()) ** 2 + (
+        (reference_rows["MonthlyCharges"] - 60.0) / reference_rows["MonthlyCharges"].std()
+    ) ** 2
+    assert distance.nlargest(len(reference_rows) - len(rows)).min() >= distance.nsmallest(
+        len(rows)
+    ).max()
+
+
+def test_single_row_fallback_uses_the_reference_profile(tmp_path) -> None:
+    features, _, _, metadata = _write_artifacts(tmp_path / "models")
     reference = metadata["reference_profile"]["values"]
 
     payload = api.ChurnRequest(tenure=5, monthly_charges=60.0, contract_type=1)
-    row, assumed = api._feature_row(payload, metadata)
+    rows, assumed, aggregation = api._feature_rows(payload, metadata, None)
 
-    assert row["Contract"].iloc[0] == "One year"
-    assert row["tenure"].iloc[0] == pytest.approx(5.0)
-    assert row["TotalCharges"].iloc[0] == pytest.approx(300.0)  # derived, not assumed
+    assert aggregation == "single_row"
+    assert len(rows) == 1
+    assert rows["Contract"].iloc[0] == "One year"
+    assert rows["tenure"].iloc[0] == pytest.approx(5.0)
+    assert rows["TotalCharges"].iloc[0] == pytest.approx(300.0)  # derived, not assumed
     for column in ("Partner", "PaperlessBilling", "PaymentMethod"):
         if column in features.columns:
-            assert row[column].iloc[0] == reference[column]
-    expected_assumed = set(features.columns) - {"tenure", "MonthlyCharges", "Contract"}
+            assert rows[column].iloc[0] == reference[column]
+    expected_assumed = set(features.columns) - {
+        "tenure",
+        "MonthlyCharges",
+        "Contract",
+        "TotalCharges",
+    }
     assert set(assumed) == expected_assumed
 
 
-def test_feature_row_rebuilds_an_observed_row_exactly(tmp_path) -> None:
+def test_feature_rows_rebuild_an_observed_row_exactly(tmp_path) -> None:
     features, _, pipeline, metadata = _write_artifacts(tmp_path / "models")
+    reference_rows = joblib.load(tmp_path / "models" / "reference_rows.joblib")
     contract_codes = {"Month-to-month": 0, "One year": 1, "Two year": 2}
     original = features.iloc[[4]]
 
@@ -339,9 +387,12 @@ def test_feature_row_rebuilds_an_observed_row_exactly(tmp_path) -> None:
         internet_service=original["InternetService"].iloc[0],
         payment_method=original["PaymentMethod"].iloc[0],
     )
-    rebuilt, assumed = api._feature_row(payload, metadata)
+    rebuilt, assumed, aggregation = api._feature_rows(payload, metadata, reference_rows)
 
-    assert assumed == {}
+    # Nothing was inferred, so the request is scored as a single customer.
+    assert assumed == []
+    assert aggregation == "single_row"
+    assert len(rebuilt) == 1
     for column in features.columns:
         if column in metadata["numeric_features"]:
             assert float(rebuilt[column].iloc[0]) == pytest.approx(

@@ -88,6 +88,7 @@ The script prints, in order:
 | --- | --- |
 | `backend/models/churn_pipeline.joblib` | Portable scikit-learn pipeline served by the API (no PyCaret at runtime). |
 | `backend/models/model_metadata.json` | Model card: metrics, reference profile, training statistics, global SHAP importance, leakage checks, fairness slices. |
+| `backend/models/reference_rows.joblib` | Training rows used to marginalise request fields the caller omits. |
 | `backend/reports/shap_summary_bar.png` | Global feature importance (report figure). |
 | `backend/reports/shap_beeswarm.png` | Effect direction and spread per feature. |
 | `backend/reports/shap_waterfall_high_risk.png` | Single-customer explanation. |
@@ -134,13 +135,24 @@ required; `support_calls` is the legacy frontend field):
 `streaming_tv`, `streaming_movies`, `paperless_billing`, `payment_method`) is
 optional and type-checked against the exact categories seen in training.
 
-Omitted fields are filled from the model's **reference profile**: a real training
-customer whose predicted risk matches the portfolio churn rate (≈0.27), not a
-per-column median/mode blend. That matters because the per-column modes jointly
-describe a high-risk archetype (month-to-month + fiber + electronic check, ≈0.40),
-which would silently inflate every sparse request. The response echoes the filled
-values in `assumed_features`, so the UI can show exactly which inputs the
-explanation is conditioned on.
+Omitted fields are **marginalised over look-alike customers** rather than filled from
+a single made-up row: the service scores the 100 training customers closest to the
+request in tenure and monthly charges (distance in standard deviations), with the
+supplied values applied to every one of them, and averages the results. That
+estimates `P(churn | supplied inputs)` and avoids the classic failure where a sparse
+request silently inherits one hidden customer archetype. Two cheaper strategies are
+demonstrably worse on the Telco data: per-column medians/modes describe a high-risk
+archetype (month-to-month + fiber + electronic check predicts ≈0.40 against a 0.27 base
+rate), and a single global "typical customer" predicts 0.02 for a brand-new
+$95/month customer whose real look-alikes churn at 0.71.
+
+The response reports what was inferred: `assumed_features` lists the inputs you did
+not supply (derived columns such as `TotalCharges` are recomputed, not inferred, so
+they are not listed) and `aggregation` says whether the score came from
+`neighbour_average` (with the number of rows) or from one row (`single_row`, used when
+every non-derived input is supplied). If the `reference_rows.joblib` artifact is
+absent, the service falls back to one real training customer at the portfolio churn
+rate (metadata `reference_profile`).
 
 `total_charges` is derived as `tenure × monthly_charges` when not supplied, and
 `No internet service` / `No phone service` values are kept consistent with the
@@ -159,16 +171,17 @@ Response:
     { "feature": "tenure", "contribution": -0.45 },
     { "feature": "MonthlyCharges", "contribution": 0.21 }
   ],
-  "explanation": "SHAP drivers for this customer: Contract (+0.830), tenure (-0.450), MonthlyCharges (+0.210). Positive values push the prediction toward churn, negative values away from it.",
+  "explanation": "SHAP drivers averaged over 100 similar customers: Contract (+0.830), tenure (-0.450), MonthlyCharges (+0.210). Positive values push the prediction toward churn, negative values away from it.",
   "model_name": "LogisticRegression",
   "xai_method": "shap",
-  "assumed_features": { "PaperlessBilling": "Yes", "TotalCharges": 1074.0 }
+  "assumed_features": ["InternetService", "PaperlessBilling"],
+  "aggregation": { "method": "neighbour_average", "rows": 100 }
 }
 ```
 
 `feature_importance` keeps the original response key so the existing frontend works
-unchanged; `top_factors`, `explanation`, `model_name`, `xai_method` and
-`assumed_features` are additive.
+unchanged; `top_factors`, `explanation`, `model_name`, `xai_method`,
+`assumed_features` and `aggregation` are additive.
 
 ---
 

@@ -7,6 +7,8 @@ import pytest
 
 from xai import (
     aggregate_to_raw_features,
+    average_absolute,
+    average_signed,
     explain_matrix,
     normalized_absolute,
     source_feature,
@@ -38,6 +40,36 @@ def test_aggregate_to_raw_features_sums_one_hot_values() -> None:
     )
     assert contributions["Contract"] == pytest.approx(3.0)
     assert contributions["tenure"] == pytest.approx(-0.5)
+
+
+def test_average_helpers_match_single_row_aggregation() -> None:
+    values = np.array([1.5, -0.5, 2.0, -1.0])
+    names = ["Contract_One year", "Contract_Two year", "tenure", "MonthlyCharges"]
+    raw = ["tenure", "MonthlyCharges", "Contract"]
+
+    single = aggregate_to_raw_features(values, names, raw)
+    assert average_signed(values, names, raw) == pytest.approx(single)
+    # Magnitudes are averaged per encoded column and only then summed, so a
+    # one-hot group's absolute importance cannot cancel out.
+    absolute = average_absolute(values, names, raw)
+    assert absolute["tenure"] == pytest.approx(abs(single["tenure"]))
+    assert absolute["MonthlyCharges"] == pytest.approx(abs(single["MonthlyCharges"]))
+    assert absolute["Contract"] == pytest.approx(2.0)
+
+
+def test_average_helpers_cancel_signs_across_customers() -> None:
+    matrix = np.array([[1.0, -2.0, 0.5], [-1.0, -2.0, 0.5]])
+    names = ["Contract_Month-to-month", "Contract_Two year", "tenure"]
+    raw = ["tenure", "Contract"]
+
+    signed = average_signed(matrix, names, raw)
+    assert signed["Contract"] == pytest.approx(-2.0)
+    assert signed["tenure"] == pytest.approx(0.5)
+
+    # Importance averages magnitudes per encoded column, so it cannot cancel.
+    absolute = average_absolute(matrix, names, raw)
+    assert absolute["Contract"] == pytest.approx(3.0)
+    assert absolute["tenure"] == pytest.approx(0.5)
 
 
 def test_normalized_absolute_sums_to_one() -> None:

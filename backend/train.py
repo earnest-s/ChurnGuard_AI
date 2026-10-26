@@ -10,6 +10,7 @@ Run from the ``backend`` directory::
 Artifacts produced (consumed by ``main.py``)::
 
     models/churn_pipeline.joblib  portable scikit-learn pipeline (no PyCaret needed at runtime)
+    models/reference_rows.joblib  training rows used to marginalise omitted request fields
     models/model_metadata.json    metrics, feature defaults, global SHAP importance
     reports/*.png                 SHAP plots for the written report
     reports/metrics.json          machine readable copy of every metric
@@ -74,6 +75,7 @@ MODELS_DIR = BASE_DIR / "models"
 REPORTS_DIR = BASE_DIR / "reports"
 DATASET_CACHE = DATA_DIR / "telco_churn.csv"
 PIPELINE_PATH = MODELS_DIR / "churn_pipeline.joblib"
+REFERENCE_ROWS_PATH = MODELS_DIR / "reference_rows.joblib"
 METADATA_PATH = MODELS_DIR / "model_metadata.json"
 REPORT_METRICS_PATH = REPORTS_DIR / "metrics.json"
 
@@ -84,6 +86,9 @@ TEST_SIZE = 0.2
 VALIDATION_SIZE = 0.2
 CV_FOLDS = 5
 MAX_LINE = 100
+#: Number of look-alike training customers averaged over when the caller omits inputs.
+NEIGHBOUR_COUNT = 100
+REFERENCE_ROW_LIMIT = 6000
 
 DATASET_URL = (
     "https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/"
@@ -189,20 +194,38 @@ def feature_defaults(features: pd.DataFrame, numeric: list[str]) -> dict[str, An
     return defaults
 
 
+def reference_rows(features: pd.DataFrame, limit: int = REFERENCE_ROW_LIMIT) -> pd.DataFrame:
+    """Training rows kept on disk so the API can marginalise omitted inputs.
+
+    Predicting with one synthetic "average" row is wrong whenever the caller
+    supplies values that do not co-occur with that profile (a $95/month
+    month-to-month customer is not a DSL customer with every add-on). Instead
+    the API averages the model over the training customers closest in tenure
+    and monthly charges, i.e. it estimates ``P(churn | supplied inputs)`` by
+    integrating out the features it was not given.
+    """
+    if len(features) <= limit:
+        return features.copy()
+    return features.sample(n=limit, random_state=RANDOM_STATE).sort_index()
+
+
 def reference_profile(
     pipeline: Pipeline,
     features: pd.DataFrame,
     target: pd.Series,
     numeric: list[str],
 ) -> dict[str, Any]:
-    """Pick a real training customer as the fallback profile for unspecified fields.
+    """Pick a real training customer as the *fallback* profile for omitted fields.
 
-    A per-column median/mode profile is *jointly* unrealistic: the mode of
+    The primary strategy is ``reference_rows`` + neighbourhood averaging (see
+    the API's ``/model-info``). This single row is what the service uses when
+    that artifact is unavailable, and it is the profile quoted in the model
+    card. A per-column median/mode blend must not be used instead: the mode of
     ``Contract`` is month-to-month, of ``InternetService`` fiber and of
-    ``PaymentMethod`` electronic check, so combining them describes a
-    high-risk archetype rather than an average customer (predicted churn ~0.40
-    vs a 0.27 base rate). Using one observed row keeps every "No internet
-    service" / "No phone service" dependency consistent as well.
+    ``PaymentMethod`` electronic check, so combining them describes a high-risk
+    archetype (predicted churn ~0.40 vs a 0.27 base rate) instead of a typical
+    customer, and it happily produces impossible combinations such as
+    ``InternetService = No`` with ``OnlineSecurity = No``.
 
     The chosen row is the observed customer whose predicted risk is closest to
     the portfolio churn base rate, which makes the fallback easy to explain:
@@ -870,6 +893,8 @@ def train(args: argparse.Namespace) -> int:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(deployed, PIPELINE_PATH, compress=3)
+    neighbour_rows = reference_rows(X_train)
+    joblib.dump(neighbour_rows, REFERENCE_ROWS_PATH, compress=3)
 
     metadata = {
         "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -905,6 +930,13 @@ def train(args: argparse.Namespace) -> int:
         "raw_features": numeric + categorical,
         "feature_defaults": feature_defaults(X_train, numeric),
         "reference_profile": reference_profile(deployed, X_train, y_train, numeric),
+        "reference_rows": {
+            "file": REFERENCE_ROWS_PATH.name,
+            "rows": int(len(neighbour_rows)),
+            "k_neighbours": NEIGHBOUR_COUNT,
+            "distance_features": ["tenure", "MonthlyCharges"],
+            "source": "training split (omitted inputs are marginalised over the nearest rows)",
+        },
         "training_stats": training_statistics(X_train, numeric),
         "top_features": shap_result.get("global", []),
         "xai": {
