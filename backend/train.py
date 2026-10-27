@@ -1026,7 +1026,7 @@ def generate_model_shap_plots(
     figure.savefig(REPORTS_DIR / f"shap_force_{model_tag}.png", dpi=180, bbox_inches="tight")
     plt.close("all")
 
-    print(f"   [✓] {type(estimator).__name__}: saved {summary_path.name} (summary) and {force_path.name} (force)")
+    print(f"   [OK] {type(estimator).__name__}: saved {summary_path.name} (summary) and {force_path.name} (force)")
     return {
         "available": True,
         "summary_plot": str(summary_path.name),
@@ -1649,14 +1649,14 @@ def train(args: argparse.Namespace) -> int:
     print("SUMMARY CONFIRMATION: ALL 3 MODELS AND SHAP PLOTS SAVED")
     print("=" * 78)
     print("Saved Trained Models (.joblib in models/):")
-    print(f"  [✓] Logistic Regression -> {LR_PIPELINE_PATH}")
-    print(f"  [✓] Random Forest       -> {RF_PIPELINE_PATH}")
-    print(f"  [✓] XGBoost             -> {XGB_PIPELINE_PATH}")
-    print(f"  [✓] Primary Pipeline    -> {PIPELINE_PATH}")
+    print(f"  [OK] Logistic Regression -> {LR_PIPELINE_PATH}")
+    print(f"  [OK] Random Forest       -> {RF_PIPELINE_PATH}")
+    print(f"  [OK] XGBoost             -> {XGB_PIPELINE_PATH}")
+    print(f"  [OK] Primary Pipeline    -> {PIPELINE_PATH}")
     print("\nSaved SHAP Explainability Plots (reports/):")
-    print(f"  [✓] Logistic Regression -> {REPORTS_DIR / 'shap_lr.png'} (summary), {REPORTS_DIR / 'shap_lr_force.png'} (force)")
-    print(f"  [✓] Random Forest       -> {REPORTS_DIR / 'shap_rf.png'} (summary), {REPORTS_DIR / 'shap_rf_force.png'} (force)")
-    print(f"  [✓] XGBoost             -> {REPORTS_DIR / 'shap_xgb.png'} (summary), {REPORTS_DIR / 'shap_xgb_force.png'} (force)")
+    print(f"  [OK] Logistic Regression -> {REPORTS_DIR / 'shap_lr.png'} (summary), {REPORTS_DIR / 'shap_lr_force.png'} (force)")
+    print(f"  [OK] Random Forest       -> {REPORTS_DIR / 'shap_rf.png'} (summary), {REPORTS_DIR / 'shap_rf_force.png'} (force)")
+    print(f"  [OK] XGBoost             -> {REPORTS_DIR / 'shap_xgb.png'} (summary), {REPORTS_DIR / 'shap_xgb_force.png'} (force)")
     print("=" * 78)
 
     print("\nDone. Next: uvicorn main:app --reload  (then open http://localhost:8000/docs)")
