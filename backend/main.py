@@ -937,7 +937,7 @@ def predict(payload: ChurnRequest):
             app.state.drift_count += 1
             app.state.drift_detected = True
 
-        customer_profile = _supplied_features(payload)
+        customer_profile = payload.model_dump(exclude_none=True)
         vector = np.array(
             [
                 [
