@@ -331,13 +331,21 @@ def build() -> Path:
     metrics_png = _terminal(
         metric_lines, "GET /metrics  ·  Prometheus exposition", "terminal_metrics.png"
     )
+    validation_lines = log[
+        next(i for i, line in enumerate(log) if line.startswith("FINAL VALIDATION SUMMARY")) - 1 :
+    ]
+    validation_png = _terminal(
+        validation_lines,
+        "train.py  ·  executable rubric validation",
+        "terminal_validation.png",
+    )
     ci_png = _terminal(
         ci_lines, "ci job  ·  flake8 + pytest (local mirror)", "terminal_ci.png"
     )
 
     shap_summary = _img(REPORTS / "shap_summary_bar.png", 8.6)
-    shap_force = _img(REPORTS / "shap_force_plot.png", 11.4)
-    gui = _img(ASSETS / "gui_prediction.png", 6.35)
+    shap_force = _img(REPORTS / "shap_force_plot.png", 9.4)
+    gui = _img(ASSETS / "gui_prediction.png", 8.7)
 
     story: list = []
 
@@ -554,7 +562,7 @@ def build() -> Path:
             CAPTION,
         ),
     ]
-    xai_row = Table([[gui_col, right_col]], colWidths=[6.85 * cm, 11.7 * cm])
+    xai_row = Table([[gui_col, right_col]], colWidths=[9.0 * cm, 9.55 * cm])
     xai_row.setStyle(
         TableStyle(
             [
@@ -616,7 +624,7 @@ def build() -> Path:
     )
     actions_png = ASSETS / "github_actions.png"
     if actions_png.exists():
-        story.append(_img(actions_png, 14.2))
+        story.append(_img(actions_png, 16.5))
         story.append(
             Paragraph(
                 "Public GitHub Actions job for rubric commit 2cd3174: Lint and test succeeded in "
@@ -724,6 +732,9 @@ resource "azurerm_container_registry" "main" {
         )
     )
     story.append(_img(metrics_png, 18.7))
+
+    story.append(Paragraph("Executable end-to-end validation", H2))
+    story.append(_img(validation_png, 18.7))
 
     doc = BaseDocTemplate(
         str(PDF_PATH),
