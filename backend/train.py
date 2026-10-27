@@ -1026,7 +1026,10 @@ def generate_model_shap_plots(
     figure.savefig(REPORTS_DIR / f"shap_force_{model_tag}.png", dpi=180, bbox_inches="tight")
     plt.close("all")
 
-    print(f"   [OK] {type(estimator).__name__}: saved {summary_path.name} (summary) and {force_path.name} (force)")
+    print(
+        f"   [OK] {type(estimator).__name__}: "
+        f"saved {summary_path.name} (summary) and {force_path.name} (force)"
+    )
     return {
         "available": True,
         "summary_plot": str(summary_path.name),
@@ -1108,7 +1111,8 @@ def rubric_validation(
             "passed": bool(optuna_result and optuna_result.get("completed")),
             "detail": (
                 f"{optuna_result['n_trials']} trials, best CV F1 "
-                f"{optuna_result['cv_f1_mean']:.4f}, {optuna_result['elapsed_seconds']:.1f}s"
+                f"{optuna_result['cv_f1_mean']:.4f}, "
+                f"{optuna_result['elapsed_seconds']:.1f}s"
                 if optuna_result
                 else "Optuna result missing"
             ),
@@ -1117,9 +1121,16 @@ def rubric_validation(
             "check": "FLAML vs PyCaret comparison completed.",
             "passed": bool(pycaret_result and flaml_result) or engine == "sklearn",
             "detail": (
-                f"PyCaret F1={pycaret_result['pycaret_f1']:.4f}, FLAML F1={flaml_result['f1']:.4f}"
+                (
+                    f"PyCaret F1={pycaret_result['pycaret_f1']:.4f}, "
+                    f"FLAML F1={flaml_result['f1']:.4f}"
+                )
                 if pycaret_result and flaml_result
-                else ("Built-in scikit-learn AutoML comparison completed" if engine == "sklearn" else "One of the AutoML engines did not complete")
+                else (
+                    "Built-in scikit-learn AutoML comparison completed"
+                    if engine == "sklearn"
+                    else "One of the AutoML engines did not complete"
+                )
             ),
         },
         {
@@ -1655,9 +1666,15 @@ def train(args: argparse.Namespace) -> int:
     print(f"  [OK] XGBoost             -> {XGB_PIPELINE_PATH}")
     print(f"  [OK] Primary Pipeline    -> {PIPELINE_PATH}")
     print("\nSaved SHAP Explainability Plots (reports/):")
-    print(f"  [OK] Logistic Regression -> {REPORTS_DIR / 'shap_lr.png'} (summary), {REPORTS_DIR / 'shap_lr_force.png'} (force)")
-    print(f"  [OK] Random Forest       -> {REPORTS_DIR / 'shap_rf.png'} (summary), {REPORTS_DIR / 'shap_rf_force.png'} (force)")
-    print(f"  [OK] XGBoost             -> {REPORTS_DIR / 'shap_xgb.png'} (summary), {REPORTS_DIR / 'shap_xgb_force.png'} (force)")
+    lr_s = REPORTS_DIR / "shap_lr.png"
+    lr_f = REPORTS_DIR / "shap_lr_force.png"
+    rf_s = REPORTS_DIR / "shap_rf.png"
+    rf_f = REPORTS_DIR / "shap_rf_force.png"
+    xg_s = REPORTS_DIR / "shap_xgb.png"
+    xg_f = REPORTS_DIR / "shap_xgb_force.png"
+    print(f"  [OK] Logistic Regression -> {lr_s} (summary), {lr_f} (force)")
+    print(f"  [OK] Random Forest       -> {rf_s} (summary), {rf_f} (force)")
+    print(f"  [OK] XGBoost             -> {xg_s} (summary), {xg_f} (force)")
     print("=" * 78)
 
     print("\nDone. Next: uvicorn main:app --reload  (then open http://localhost:8000/docs)")
