@@ -651,6 +651,105 @@ def _explain_automl(
     return normalized_absolute(importance), factors, "shap"
 
 
+def _generate_shap_reason(
+    pipeline_or_model: Any,
+    explainer: Any | None,
+    scored_input: Any,
+    customer_dict: dict[str, Any],
+    metadata: dict[str, Any] | None,
+    probability: float,
+) -> str:
+    """Generate a readable SHAP-based explanation sentence for the model's prediction."""
+    drivers: dict[str, float] = {}
+
+    if explainer is not None and pipeline_or_model is not None:
+        try:
+            if hasattr(pipeline_or_model, "named_steps") and "preprocess" in pipeline_or_model.named_steps:
+                preprocessor = pipeline_or_model.named_steps["preprocess"]
+                matrix = np.asarray(preprocessor.transform(scored_input), dtype=float)
+                transformed_names = list(preprocessor.get_feature_names_out())
+                raw_features = (metadata or {}).get("raw_features") or list(customer_dict.keys())
+                values = explain_matrix(explainer, matrix)
+                drivers = average_signed(values, transformed_names, raw_features)
+            else:
+                matrix = np.atleast_2d(scored_input)
+                transformed_names = list(LEGACY_FEATURES)
+                raw_features = list(LEGACY_FEATURES)
+                values = explain_matrix(explainer, matrix)
+                drivers = average_signed(values, transformed_names, raw_features)
+        except Exception as exc:
+            logger.debug("SHAP explanation calculation failed: %s", exc)
+
+    if not drivers and pipeline_or_model is not None:
+        if hasattr(pipeline_or_model, "coef_"):
+            raw = pipeline_or_model.coef_[0]
+            names = list(LEGACY_FEATURES)
+            drivers = {name: float(raw[i]) for i, name in enumerate(names) if i < len(raw)}
+        elif hasattr(pipeline_or_model, "feature_importances_"):
+            raw = pipeline_or_model.feature_importances_
+            names = list(LEGACY_FEATURES)
+            mult = 1.0 if probability >= 0.5 else -1.0
+            drivers = {name: float(raw[i] * mult) for i, name in enumerate(names) if i < len(raw)}
+
+    if probability >= 0.5:
+        # Push toward Churn: positive drivers
+        pos = {k: v for k, v in drivers.items() if v > 0}
+        candidates = (
+            sorted(pos.items(), key=lambda it: it[1], reverse=True)
+            if pos
+            else sorted(drivers.items(), key=lambda it: abs(it[1]), reverse=True)
+        )
+    else:
+        # Push away from Churn (No Churn): negative drivers
+        neg = {k: v for k, v in drivers.items() if v < 0}
+        candidates = (
+            sorted(neg.items(), key=lambda it: it[1])
+            if neg
+            else sorted(drivers.items(), key=lambda it: abs(it[1]), reverse=True)
+        )
+
+    top_drivers = candidates[:2]
+    if not top_drivers:
+        return "Standard customer usage and billing profile drove this prediction."
+
+    training_stats = (metadata or {}).get("training_stats", {})
+    parts = []
+    for feat, contrib in top_drivers:
+        feat_name = feat.strip()
+        if feat_name.lower() == "tenure":
+            feat_display = "Tenure"
+        elif feat_name.lower() == "monthlycharges":
+            feat_display = "MonthlyCharges"
+        elif feat_name.lower() == "totalcharges":
+            feat_display = "TotalCharges"
+        else:
+            feat_display = feat_name[0].upper() + feat_name[1:] if feat_name else feat_name
+
+        val = customer_dict.get(feat_name, customer_dict.get(feat_name.lower(), None))
+        stat = training_stats.get(feat_name, training_stats.get(feat_name.lower(), None))
+        if stat and "mean" in stat:
+            mean_val = float(stat["mean"])
+        elif "tenure" in feat_name.lower():
+            mean_val = 32.0
+        elif "charge" in feat_name.lower():
+            mean_val = 65.0
+        else:
+            mean_val = 50.0
+
+        if val is not None and isinstance(val, (int, float)):
+            prefix = "High " if float(val) >= mean_val else "Low "
+            parts.append(f"{prefix}{feat_display} ({contrib:+.2f})")
+        elif val is not None and isinstance(val, str) and val not in ("Yes", "No"):
+            parts.append(f"{feat_display}={val} ({contrib:+.2f})")
+        else:
+            prefix = "High " if contrib > 0 else "Low "
+            parts.append(f"{prefix}{feat_display} ({contrib:+.2f})")
+
+    if len(parts) == 1:
+        return f"{parts[0]} drove this prediction."
+    return f"{parts[0]} and {parts[1]} drove this prediction."
+
+
 # ---------------------------------------------------------------------------
 # Logging / storage
 # ---------------------------------------------------------------------------
@@ -740,7 +839,7 @@ def _load_retrain_data() -> tuple[np.ndarray, np.ndarray]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _ensure_storage_paths()
-    pipeline, metadata = _load_artifacts()
+    models, explainers, pipeline, metadata = _load_all_models()
 
     if pipeline is not None and metadata is not None:
         app.state.kind = "automl"
@@ -750,16 +849,24 @@ async def lifespan(app: FastAPI):
         app.state.explainer = _explainer_for(pipeline)
         app.state.reference_rows = _load_reference_rows()
         app.state.baseline_stats = _metadata_stats(metadata)
+
+        app.state.models = models
+        app.state.explainers = explainers
+        for name in ("Logistic_Regression", "Random_Forest", "XGBoost"):
+            if name not in app.state.models:
+                app.state.models[name] = pipeline
+                app.state.explainers[name] = app.state.explainer
+
         logger.info(
-            "Loaded AutoML pipeline '%s' (trained %s) with %s explainer and %s reference rows",
+            "Loaded %d models at startup for '%s' (trained %s) with %s reference rows",
+            len(app.state.models),
             app.state.model_name,
             metadata.get("trained_at", "unknown"),
-            "a SHAP" if app.state.explainer is not None else "no",
             len(app.state.reference_rows) if app.state.reference_rows is not None else 0,
         )
     else:
         logger.warning(
-            "No AutoML artifact found in %s - serving the synthetic baseline model. "
+            "No AutoML artifact found in %s - serving synthetic baseline models. "
             "Run 'python train.py' for the AutoML + SHAP model.",
             MODEL_DIR,
         )
@@ -768,7 +875,10 @@ async def lifespan(app: FastAPI):
         app.state.pipeline = None
         app.state.metadata = None
         app.state.reference_rows = None
-        app.state.model = _train_fallback_model()
+        fallback_models, fallback_explainers = _train_fallback_models()
+        app.state.models = fallback_models
+        app.state.explainers = fallback_explainers
+        app.state.model = fallback_models.get("Logistic_Regression")
         app.state.model_name = "baseline-logistic-regression"
         app.state.explainer = None
         app.state.baseline_stats = _fallback_stats(X)
@@ -827,6 +937,19 @@ def predict(payload: ChurnRequest):
             app.state.drift_count += 1
             app.state.drift_detected = True
 
+        customer_profile = _supplied_features(payload)
+        vector = np.array(
+            [
+                [
+                    float(payload.tenure),
+                    float(payload.monthly_charges),
+                    int(payload.contract_type),
+                    int(payload.support_calls),
+                ]
+            ],
+            dtype=float,
+        )
+
         if app.state.kind == "automl":
             metadata = app.state.metadata
             rows, assumed, aggregation_method = _feature_rows(
@@ -837,6 +960,7 @@ def predict(payload: ChurnRequest):
                 app.state.pipeline, app.state.explainer, rows, metadata
             )
             aggregation = {"method": aggregation_method, "rows": int(len(rows))}
+            scored_input = rows
         else:
             assumed, aggregation = [], {"method": "single_row", "rows": 1}
             model = app.state.model
@@ -845,21 +969,52 @@ def predict(payload: ChurnRequest):
                     status_code=503,
                     content={"error": "Model is not ready", "message": "Prediction failed"},
                 )
-            vector = np.array(
-                [
-                    [
-                        float(payload.tenure),
-                        float(payload.monthly_charges),
-                        int(payload.contract_type),
-                        int(payload.support_calls),
-                    ]
-                ],
-                dtype=float,
-            )
             probability = float(model.predict_proba(vector)[0][1])
             importance = _coefficient_importance(model)
             factors = top_factors(importance, limit=3)
             method = "coefficients"
+            scored_input = vector
+
+        # Multi-model individual predictions and SHAP reasons
+        model_predictions: dict[str, ModelPredictionItem] = {}
+        for m_name in ("Logistic_Regression", "Random_Forest", "XGBoost"):
+            m_pipe = getattr(app.state, "models", {}).get(m_name)
+            m_expl = getattr(app.state, "explainers", {}).get(m_name)
+            if m_pipe is None and hasattr(app.state, "pipeline") and app.state.pipeline is not None:
+                m_pipe = app.state.pipeline
+                m_expl = getattr(app.state, "explainer", None)
+            elif m_pipe is None and hasattr(app.state, "model") and app.state.model is not None:
+                m_pipe = app.state.model
+                m_expl = None
+
+            if m_pipe is not None:
+                if app.state.kind == "automl" and hasattr(m_pipe, "named_steps"):
+                    m_prob = float(np.mean(m_pipe.predict_proba(rows)[:, 1]))
+                    m_in = rows
+                else:
+                    m_prob = float(m_pipe.predict_proba(vector)[0][1])
+                    m_in = vector
+
+                m_pred = "Churn" if m_prob >= 0.5 else "No Churn"
+                m_reason = _generate_shap_reason(
+                    m_pipe,
+                    m_expl,
+                    m_in,
+                    customer_profile,
+                    getattr(app.state, "metadata", None),
+                    m_prob,
+                )
+                model_predictions[m_name] = ModelPredictionItem(
+                    prediction=m_pred,
+                    probability=round(float(m_prob), 2),
+                    shap_reason=m_reason,
+                )
+            else:
+                model_predictions[m_name] = ModelPredictionItem(
+                    prediction="No Churn",
+                    probability=0.5,
+                    shap_reason="Model not initialized.",
+                )
 
         prediction = "High Risk" if probability >= 0.5 else "Low Risk"
         explanation = _explain_text(factors, method, aggregation)
@@ -876,6 +1031,8 @@ def predict(payload: ChurnRequest):
         )
 
         return ChurnResponse(
+            customer_profile=customer_profile,
+            model_predictions=model_predictions,
             churn_probability=round(probability, 4),
             prediction=prediction,
             feature_importance=importance,
