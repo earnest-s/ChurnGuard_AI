@@ -1,7 +1,7 @@
 {
-  "trained_at": "2026-10-26T17:37:39+00:00",
+  "trained_at": "2026-10-27T10:22:14+00:00",
   "model_name": "LogisticRegression",
-  "engine": "pycaret",
+  "engine": "sklearn",
   "selection": "tuned ({'model__C': 10.0}) - validation F1 0.5642",
   "validation": {
     "split_size": 0.2,
@@ -24,7 +24,7 @@
   },
   "metrics": {
     "baseline": {
-      "method": "Optuna (20 trials, 10.5s)",
+      "method": "Optuna (5 trials, 0.5s)",
       "cv_f1_mean": 0.6338,
       "cv_f1_std": 0.0029,
       "untuned": {
@@ -45,7 +45,7 @@
     "automl": {
       "cv_f1_mean": 0.5951,
       "cv_f1_std": 0.0216,
-      "pycaret_holdout_f1": 0.6082,
+      "pycaret_holdout_f1": null,
       "f1": 0.6054,
       "precision": 0.6426,
       "recall": 0.5722,
@@ -77,19 +77,19 @@
       "tool": "Optuna (baseline LR)",
       "budget_s": 60,
       "holdout_f1": 0.6061,
-      "notes": "Optuna (20 trials, 10.5s)"
+      "notes": "Optuna (5 trials, 0.5s)"
     },
     {
       "tool": "PyCaret",
-      "budget_s": 60,
-      "holdout_f1": 0.6082,
-      "notes": "LogisticRegression"
+      "budget_s": "n/a",
+      "holdout_f1": "n/a",
+      "notes": "unavailable"
     },
     {
       "tool": "FLAML",
-      "budget_s": 60,
-      "holdout_f1": 0.5844,
-      "notes": "rf"
+      "budget_s": "n/a",
+      "holdout_f1": "n/a",
+      "notes": "unavailable"
     }
   ],
   "automl_tools": {
@@ -101,96 +101,30 @@
       },
       "cv_f1_mean": 0.6338,
       "cv_f1_std": 0.0029,
-      "n_trials": 20,
-      "requested_trials": 20,
-      "elapsed_seconds": 10.5,
+      "n_trials": 5,
+      "requested_trials": 5,
+      "elapsed_seconds": 0.5,
       "timeout_seconds": 60,
       "completed": true
     },
-    "pycaret": {
-      "engine": "pycaret",
-      "model_name": "LogisticRegression",
-      "pycaret_f1": 0.6082,
-      "candidates": [
-        "lr",
-        "dt",
-        "rf",
-        "et",
-        "gbc"
-      ],
-      "elapsed_seconds": 60.2,
-      "time_budget_seconds": 60
-    },
-    "flaml": {
-      "engine": "flaml",
-      "model_name": "rf",
-      "f1": 0.5844,
-      "elapsed_seconds": 60.0,
-      "time_budget_seconds": 60,
-      "best_config": {
-        "n_estimators": "7",
-        "max_features": "0.4067529380232158",
-        "max_leaves": "62",
-        "criterion": "gini"
-      },
-      "completed": true
-    }
+    "pycaret": null,
+    "flaml": null
   },
   "automl_leaderboard": [
     {
-      "model": "Logistic Regression",
-      "accuracy": 0.803,
-      "auc": 0.8469,
-      "recall": 0.5499,
-      "precision": 0.6534,
-      "f1": 0.597,
-      "kappa": 0.4679,
-      "mcc": 0.4711,
-      "tt_sec": 3.7267
+      "model": "LogisticRegression",
+      "cv_f1_mean": 0.596,
+      "cv_f1_std": 0.0224
     },
     {
-      "model": "Gradient Boosting Classifier",
-      "accuracy": 0.8028,
-      "auc": 0.8474,
-      "recall": 0.5251,
-      "precision": 0.6627,
-      "f1": 0.5859,
-      "kappa": 0.4588,
-      "mcc": 0.4642,
-      "tt_sec": 4.1567
+      "model": "RandomForest",
+      "cv_f1_mean": 0.582,
+      "cv_f1_std": 0.0185
     },
     {
-      "model": "Random Forest Classifier",
-      "accuracy": 0.7937,
-      "auc": 0.8254,
-      "recall": 0.497,
-      "precision": 0.6452,
-      "f1": 0.5615,
-      "kappa": 0.4296,
-      "mcc": 0.4358,
-      "tt_sec": 3.64
-    },
-    {
-      "model": "Extra Trees Classifier",
-      "accuracy": 0.7724,
-      "auc": 0.797,
-      "recall": 0.4762,
-      "precision": 0.5883,
-      "f1": 0.526,
-      "kappa": 0.3786,
-      "mcc": 0.3824,
-      "tt_sec": 2.1333
-    },
-    {
-      "model": "Decision Tree Classifier",
-      "accuracy": 0.7268,
-      "auc": 0.6571,
-      "recall": 0.5077,
-      "precision": 0.4865,
-      "f1": 0.4966,
-      "kappa": 0.3094,
-      "mcc": 0.3096,
-      "tt_sec": 3.2867
+      "model": "DecisionTree",
+      "cv_f1_mean": 0.5679,
+      "cv_f1_std": 0.0346
     }
   ],
   "leakage_probe": {
@@ -221,12 +155,12 @@
       {
         "check": "Optuna Bayesian Optimization completed.",
         "passed": true,
-        "detail": "20 trials, best CV F1 0.6338, 10.5s"
+        "detail": "5 trials, best CV F1 0.6338, 0.5s"
       },
       {
         "check": "FLAML vs PyCaret comparison completed.",
-        "passed": true,
-        "detail": "PyCaret F1=0.6082, FLAML F1=0.5844"
+        "passed": false,
+        "detail": "One of the AutoML engines did not complete"
       },
       {
         "check": "Deliberate Leakage test detected and feature dropped.",
@@ -249,8 +183,8 @@
         "detail": "k8s/deployment.yaml, k8s/service.yaml, terraform/main.tf, multi-stage Dockerfile"
       }
     ],
-    "passed": true,
-    "passed_count": 6,
+    "passed": false,
+    "passed_count": 5,
     "total": 6
   },
   "numeric_features": [
