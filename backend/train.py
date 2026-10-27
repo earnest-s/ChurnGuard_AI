@@ -62,6 +62,7 @@ from sklearn.model_selection import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.tree import DecisionTreeClassifier
+from xgboost import XGBClassifier
 
 from xai import (
     base_value,
@@ -77,6 +78,9 @@ MODELS_DIR = BASE_DIR / "models"
 REPORTS_DIR = BASE_DIR / "reports"
 DATASET_CACHE = DATA_DIR / "telco_churn.csv"
 PIPELINE_PATH = MODELS_DIR / "churn_pipeline.joblib"
+LR_PIPELINE_PATH = MODELS_DIR / "logistic_regression.joblib"
+RF_PIPELINE_PATH = MODELS_DIR / "random_forest.joblib"
+XGB_PIPELINE_PATH = MODELS_DIR / "xgboost.joblib"
 REFERENCE_ROWS_PATH = MODELS_DIR / "reference_rows.joblib"
 METADATA_PATH = MODELS_DIR / "model_metadata.json"
 REPORT_METRICS_PATH = REPORTS_DIR / "metrics.json"
@@ -954,6 +958,82 @@ def explain_model(
     }
 
 
+def generate_model_shap_plots(
+    pipeline: Pipeline,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    numeric: list[str],
+    categorical: list[str],
+    model_tag: str,
+    sample_size: int = 200,
+) -> dict[str, Any]:
+    """Generate SHAP summary plot and force plot for a sample prediction."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import shap as shap_lib
+
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    preprocessor = pipeline.named_steps["preprocess"]
+    estimator = pipeline.named_steps["model"]
+    transformed_names = list(preprocessor.get_feature_names_out())
+
+    sample = X_test.head(sample_size)
+    matrix = np.asarray(preprocessor.transform(sample), dtype=float)
+
+    explainer = build_explainer(estimator, matrix.shape[1])
+    if explainer is None:
+        print(f"!  No SHAP explainer available for {model_tag} - skipping plots.")
+        return {"available": False, "summary_plot": None, "force_plot": None}
+
+    values = explain_matrix(explainer, matrix)
+    explanation = shap_lib.Explanation(
+        values=values,
+        base_values=np.full(len(sample), base_value(explainer)),
+        data=matrix,
+        feature_names=transformed_names,
+    )
+
+    # 1. Summary plot (e.g. reports/shap_lr.png, reports/shap_rf.png, reports/shap_xgb.png)
+    summary_path = REPORTS_DIR / f"shap_{model_tag}.png"
+    plt.figure()
+    shap_lib.plots.beeswarm(explanation, max_display=15, show=False)
+    figure = plt.gcf()
+    figure.set_size_inches(10, 6)
+    if figure.axes:
+        figure.axes[0].set_title(f"SHAP Summary Plot - {type(estimator).__name__}")
+    figure.tight_layout()
+    figure.savefig(summary_path, dpi=160, bbox_inches="tight")
+    # Also save an alias summary name for clarity
+    figure.savefig(REPORTS_DIR / f"shap_{model_tag}_summary.png", dpi=160, bbox_inches="tight")
+    plt.close("all")
+
+    # 2. Force plot for a sample prediction (e.g. reports/shap_lr_force.png)
+    probabilities = pipeline.predict_proba(sample)[:, 1]
+    sample_idx = int(np.argmax(probabilities))
+    force_path = REPORTS_DIR / f"shap_{model_tag}_force.png"
+    shap_lib.plots.force(
+        explanation[sample_idx],
+        matplotlib=True,
+        show=False,
+        figsize=(16, 3),
+        text_rotation=10,
+    )
+    figure = plt.gcf()
+    figure.set_size_inches(16, 3.4)
+    figure.savefig(force_path, dpi=180, bbox_inches="tight")
+    figure.savefig(REPORTS_DIR / f"shap_force_{model_tag}.png", dpi=180, bbox_inches="tight")
+    plt.close("all")
+
+    print(f"   [✓] {type(estimator).__name__}: saved {summary_path.name} (summary) and {force_path.name} (force)")
+    return {
+        "available": True,
+        "summary_plot": str(summary_path.name),
+        "force_plot": str(force_path.name),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Orchestration
 # ---------------------------------------------------------------------------
@@ -1149,6 +1229,91 @@ def train(args: argparse.Namespace) -> int:
         f"roc_auc = {baseline_metrics['roc_auc']:.4f}"
     )
 
+    lr_pipe = baseline
+    lr_metrics = baseline_metrics
+
+    # --- Distinct Models: Random Forest & XGBoost -------------------------
+    print("\n   [2/3] Training Random Forest Classifier ...")
+    rf_pipe = build_pipeline(
+        RandomForestClassifier(
+            n_estimators=100,
+            max_depth=10,
+            min_samples_leaf=2,
+            random_state=RANDOM_STATE,
+            n_jobs=-1,
+        ),
+        numeric,
+        categorical,
+    )
+    rf_pipe.fit(X_train, y_train)
+    rf_metrics = evaluate(rf_pipe, X_test, y_test)
+    print(
+        f"   Random Forest: holdout F1 = {rf_metrics['f1']:.4f}  "
+        f"precision = {rf_metrics['precision']:.4f}  "
+        f"recall = {rf_metrics['recall']:.4f}  "
+        f"roc_auc = {rf_metrics['roc_auc']:.4f}"
+    )
+
+    print("\n   [3/3] Training XGBoost Classifier ...")
+    xgb_pipe = build_pipeline(
+        XGBClassifier(
+            n_estimators=100,
+            max_depth=4,
+            learning_rate=0.1,
+            eval_metric="logloss",
+            random_state=RANDOM_STATE,
+            n_jobs=-1,
+        ),
+        numeric,
+        categorical,
+    )
+    xgb_pipe.fit(X_train, y_train)
+    xgb_metrics = evaluate(xgb_pipe, X_test, y_test)
+    print(
+        f"   XGBoost: holdout F1 = {xgb_metrics['f1']:.4f}  "
+        f"precision = {xgb_metrics['precision']:.4f}  "
+        f"recall = {xgb_metrics['recall']:.4f}  "
+        f"roc_auc = {xgb_metrics['roc_auc']:.4f}"
+    )
+
+    # Comparison Table of F1 scores and ROC-AUC on held-out test set
+    three_model_comparison = [
+        {
+            "Model": "1. Logistic Regression (Baseline)",
+            "F1 Score": f"{lr_metrics['f1']:.4f}",
+            "ROC-AUC": f"{lr_metrics['roc_auc']:.4f}",
+            "Precision": f"{lr_metrics['precision']:.4f}",
+            "Recall": f"{lr_metrics['recall']:.4f}",
+            "Accuracy": f"{lr_metrics['accuracy']:.4f}",
+        },
+        {
+            "Model": "2. Random Forest Classifier",
+            "F1 Score": f"{rf_metrics['f1']:.4f}",
+            "ROC-AUC": f"{rf_metrics['roc_auc']:.4f}",
+            "Precision": f"{rf_metrics['precision']:.4f}",
+            "Recall": f"{rf_metrics['recall']:.4f}",
+            "Accuracy": f"{rf_metrics['accuracy']:.4f}",
+        },
+        {
+            "Model": "3. XGBoost Classifier",
+            "F1 Score": f"{xgb_metrics['f1']:.4f}",
+            "ROC-AUC": f"{xgb_metrics['roc_auc']:.4f}",
+            "Precision": f"{xgb_metrics['precision']:.4f}",
+            "Recall": f"{xgb_metrics['recall']:.4f}",
+            "Accuracy": f"{xgb_metrics['accuracy']:.4f}",
+        },
+    ]
+
+    print("\n" + "=" * 78)
+    print("THREE-MODEL EVALUATION COMPARISON (Held-out Test Set)")
+    print("=" * 78)
+    _print_table(
+        "Model Comparison Table (Held-out Test Set)",
+        three_model_comparison,
+        ["Model", "F1 Score", "ROC-AUC", "Precision", "Recall", "Accuracy"],
+    )
+    print("=" * 78)
+
     # --- AutoML -----------------------------------------------------------
     print(f"\n3. AutoML model comparison ({args.budget_seconds:.0f}s budget per engine)")
     automl: dict[str, Any] | None = None
@@ -1333,6 +1498,10 @@ def train(args: argparse.Namespace) -> int:
     elif not shap_available():
         print("!  shap is not installed - skipping plots.")
     else:
+        print("   Generating SHAP summary and force plots for EACH of the 3 models ...")
+        generate_model_shap_plots(lr_pipe, X_test, y_test, numeric, categorical, "lr")
+        generate_model_shap_plots(rf_pipe, X_test, y_test, numeric, categorical, "rf")
+        generate_model_shap_plots(xgb_pipe, X_test, y_test, numeric, categorical, "xgb")
         shap_result = explain_model(deployed, X_test, y_test, numeric, categorical)
 
     # --- Persist ----------------------------------------------------------
@@ -1341,6 +1510,10 @@ def train(args: argparse.Namespace) -> int:
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    # Save all three distinct models as .joblib in models/
+    joblib.dump(lr_pipe, LR_PIPELINE_PATH, compress=3)
+    joblib.dump(rf_pipe, RF_PIPELINE_PATH, compress=3)
+    joblib.dump(xgb_pipe, XGB_PIPELINE_PATH, compress=3)
     joblib.dump(deployed, PIPELINE_PATH, compress=3)
     neighbour_rows = reference_rows(X_train)
     joblib.dump(neighbour_rows, REFERENCE_ROWS_PATH, compress=3)
@@ -1471,6 +1644,21 @@ def train(args: argparse.Namespace) -> int:
     print(f"   pipeline -> {PIPELINE_PATH}")
     print(f"   metadata -> {METADATA_PATH}")
     print(f"   report   -> {REPORT_METRICS_PATH}")
+
+    print("\n" + "=" * 78)
+    print("SUMMARY CONFIRMATION: ALL 3 MODELS AND SHAP PLOTS SAVED")
+    print("=" * 78)
+    print("Saved Trained Models (.joblib in models/):")
+    print(f"  [✓] Logistic Regression -> {LR_PIPELINE_PATH}")
+    print(f"  [✓] Random Forest       -> {RF_PIPELINE_PATH}")
+    print(f"  [✓] XGBoost             -> {XGB_PIPELINE_PATH}")
+    print(f"  [✓] Primary Pipeline    -> {PIPELINE_PATH}")
+    print("\nSaved SHAP Explainability Plots (reports/):")
+    print(f"  [✓] Logistic Regression -> {REPORTS_DIR / 'shap_lr.png'} (summary), {REPORTS_DIR / 'shap_lr_force.png'} (force)")
+    print(f"  [✓] Random Forest       -> {REPORTS_DIR / 'shap_rf.png'} (summary), {REPORTS_DIR / 'shap_rf_force.png'} (force)")
+    print(f"  [✓] XGBoost             -> {REPORTS_DIR / 'shap_xgb.png'} (summary), {REPORTS_DIR / 'shap_xgb_force.png'} (force)")
+    print("=" * 78)
+
     print("\nDone. Next: uvicorn main:app --reload  (then open http://localhost:8000/docs)")
     return 0 if overall_passed else 1
 

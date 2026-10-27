@@ -31,7 +31,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from prometheus_fastapi_instrumentator import Instrumentator
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
 
 from xai import (
     average_absolute,
@@ -56,9 +58,18 @@ def _env_path(variable: str, default: Path) -> Path:
 MODEL_DIR: Path = _env_path("CHURNGUARD_MODEL_DIR", BASE_DIR / "models")
 DATA_DIR: Path = _env_path("CHURNGUARD_DATA_DIR", BASE_DIR / "data")
 PIPELINE_PATH: Path = MODEL_DIR / "churn_pipeline.joblib"
+LR_PIPELINE_PATH: Path = MODEL_DIR / "logistic_regression.joblib"
+RF_PIPELINE_PATH: Path = MODEL_DIR / "random_forest.joblib"
+XGB_PIPELINE_PATH: Path = MODEL_DIR / "xgboost.joblib"
 REFERENCE_ROWS_PATH: Path = MODEL_DIR / "reference_rows.joblib"
 METADATA_PATH: Path = MODEL_DIR / "model_metadata.json"
 PREDICTIONS_CSV_PATH: Path = DATA_DIR / "predictions.csv"
+
+MODEL_PATHS: dict[str, Path] = {
+    "Logistic_Regression": LR_PIPELINE_PATH,
+    "Random_Forest": RF_PIPELINE_PATH,
+    "XGBoost": XGB_PIPELINE_PATH,
+}
 
 LEGACY_FEATURES: tuple[str, str, str, str] = (
     "tenure",
@@ -186,10 +197,18 @@ class Factor(BaseModel):
     contribution: float
 
 
+class ModelPredictionItem(BaseModel):
+    prediction: str
+    probability: float
+    shap_reason: str
+
+
 class ChurnResponse(BaseModel):
     # ``model_name`` would otherwise collide with pydantic's protected "model_" namespace.
     model_config = ConfigDict(protected_namespaces=())
 
+    customer_profile: dict[str, Any] = Field(default_factory=dict)
+    model_predictions: dict[str, ModelPredictionItem] = Field(default_factory=dict)
     churn_probability: float
     prediction: Literal["High Risk", "Low Risk"]
     feature_importance: dict[str, float]
@@ -253,6 +272,27 @@ def _train_fallback_model() -> LogisticRegression:
     return model
 
 
+def _train_fallback_models() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Train lightweight in-process models for LR, RF, XGB if artifacts are missing."""
+    X, y = _generate_synthetic_data(rows=1000)
+    lr = LogisticRegression(max_iter=1000, random_state=42).fit(X, y)
+    rf = RandomForestClassifier(n_estimators=50, max_depth=6, random_state=42).fit(X, y)
+    xgb = XGBClassifier(
+        n_estimators=50, max_depth=3, eval_metric="logloss", random_state=42
+    ).fit(X, y)
+    models = {
+        "Logistic_Regression": lr,
+        "Random_Forest": rf,
+        "XGBoost": xgb,
+    }
+    explainers = {
+        "Logistic_Regression": build_explainer(lr, 4),
+        "Random_Forest": build_explainer(rf, 4),
+        "XGBoost": build_explainer(xgb, 4),
+    }
+    return models, explainers
+
+
 def _coefficient_importance(model: LogisticRegression) -> dict[str, float]:
     raw = np.abs(model.coef_[0])
     total = float(raw.sum())
@@ -272,21 +312,52 @@ def _fallback_stats(X: np.ndarray) -> dict[str, tuple[float, float]]:
 # ---------------------------------------------------------------------------
 # Artifact loading
 # ---------------------------------------------------------------------------
+def _load_all_models() -> tuple[dict[str, Any], dict[str, Any], Any | None, dict[str, Any] | None]:
+    """Load all 3 models and their SHAP explainers, plus metadata and primary pipeline."""
+    metadata = None
+    if METADATA_PATH.exists():
+        try:
+            metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Could not load model metadata: %s", exc)
+
+    models: dict[str, Any] = {}
+    explainers: dict[str, Any] = {}
+
+    for name, path in MODEL_PATHS.items():
+        if path.exists():
+            try:
+                pipe = joblib.load(path)
+                models[name] = pipe
+                explainers[name] = _explainer_for(pipe)
+                logger.info(
+                    "Loaded model '%s' from %s with %s",
+                    name,
+                    path.name,
+                    "SHAP explainer" if explainers[name] is not None else "no explainer",
+                )
+            except Exception as exc:
+                logger.warning("Could not load model '%s' from %s: %s", name, path, exc)
+
+    primary_pipeline = None
+    if PIPELINE_PATH.exists():
+        try:
+            primary_pipeline = joblib.load(PIPELINE_PATH)
+        except Exception:
+            primary_pipeline = None
+
+    if primary_pipeline is None and models:
+        for candidate in ("XGBoost", "Random_Forest", "Logistic_Regression"):
+            if candidate in models:
+                primary_pipeline = models[candidate]
+                break
+
+    return models, explainers, primary_pipeline, metadata
+
+
 def _load_artifacts() -> tuple[Any | None, dict[str, Any] | None]:
     """Load the portable pipeline + metadata written by ``train.py``."""
-    if not PIPELINE_PATH.exists() or not METADATA_PATH.exists():
-        return None, None
-    try:
-        pipeline = joblib.load(PIPELINE_PATH)
-        metadata = json.loads(METADATA_PATH.read_text(encoding="utf-8"))
-    except Exception as exc:
-        logger.error(
-            "Could not load AutoML artifacts (%s: %s). Falling back to the baseline model. "
-            "Re-run train.py in an environment that has every dependency of the winning model.",
-            type(exc).__name__,
-            exc,
-        )
-        return None, None
+    _, _, pipeline, metadata = _load_all_models()
     return pipeline, metadata
 
 
