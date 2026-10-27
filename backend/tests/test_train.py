@@ -66,3 +66,47 @@ def test_optuna_returns_a_fitted_pipeline() -> None:
     predictions = result["pipeline"].predict(features)
     assert len(predictions) == len(features)
     assert set(np.unique(predictions)) <= {0, 1}
+
+
+def test_three_models_training_and_shap_generation(tmp_path, monkeypatch) -> None:
+    frame, _ = train.clean_dataset(_frame(rows=80))
+    features, target, numeric, categorical = train.split_features(frame)
+    X_train, X_test, y_train, y_test = train.train_test_split(
+        features, target, test_size=0.25, random_state=42, stratify=target
+    )
+
+    reports_dir = tmp_path / "reports"
+    monkeypatch.setattr(train, "REPORTS_DIR", reports_dir)
+
+    # 1. Logistic Regression
+    lr = train.build_pipeline(
+        train.LogisticRegression(max_iter=1000, random_state=42), numeric, categorical
+    ).fit(X_train, y_train)
+    lr_metrics = train.evaluate(lr, X_test, y_test)
+    assert 0.0 <= lr_metrics["f1"] <= 1.0
+    assert 0.0 <= lr_metrics["roc_auc"] <= 1.0
+
+    # 2. Random Forest
+    rf = train.build_pipeline(
+        train.RandomForestClassifier(n_estimators=10, random_state=42), numeric, categorical
+    ).fit(X_train, y_train)
+    rf_metrics = train.evaluate(rf, X_test, y_test)
+    assert 0.0 <= rf_metrics["f1"] <= 1.0
+    assert 0.0 <= rf_metrics["roc_auc"] <= 1.0
+
+    # 3. XGBoost
+    xgb = train.build_pipeline(
+        train.XGBClassifier(n_estimators=10, max_depth=3, eval_metric="logloss", random_state=42),
+        numeric,
+        categorical,
+    ).fit(X_train, y_train)
+    xgb_metrics = train.evaluate(xgb, X_test, y_test)
+    assert 0.0 <= xgb_metrics["f1"] <= 1.0
+    assert 0.0 <= xgb_metrics["roc_auc"] <= 1.0
+
+    # Test SHAP plot generation for all 3 models
+    for tag, pipe in (("lr", lr), ("rf", rf), ("xgb", xgb)):
+        res = train.generate_model_shap_plots(pipe, X_test, y_test, numeric, categorical, tag, sample_size=20)
+        assert res["available"] is True
+        assert (reports_dir / f"shap_{tag}.png").exists()
+        assert (reports_dir / f"shap_{tag}_force.png").exists()

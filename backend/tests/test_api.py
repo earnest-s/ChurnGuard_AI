@@ -427,3 +427,59 @@ def test_feature_rows_rebuild_an_observed_row_exactly(tmp_path) -> None:
     assert pipeline.predict_proba(rebuilt)[0, 1] == pytest.approx(
         pipeline.predict_proba(original)[0, 1]
     )
+
+
+def test_predict_returns_multi_model_predictions_and_shap_reasons(client: TestClient) -> None:
+    response = client.post("/predict", json=VALID_PAYLOAD)
+    assert response.status_code == 200
+    body = response.json()
+
+    assert "customer_profile" in body
+    assert body["customer_profile"]["tenure"] == VALID_PAYLOAD["tenure"]
+    assert body["customer_profile"]["monthly_charges"] == VALID_PAYLOAD["monthly_charges"]
+
+    assert "model_predictions" in body
+    predictions = body["model_predictions"]
+    for model_name in ("Logistic_Regression", "Random_Forest", "XGBoost"):
+        assert model_name in predictions
+        item = predictions[model_name]
+        assert item["prediction"] in ("Churn", "No Churn")
+        assert 0.0 <= item["probability"] <= 1.0
+        assert isinstance(item["shap_reason"], str)
+        assert len(item["shap_reason"]) > 0
+        assert "drove this prediction" in item["shap_reason"] or "profile" in item["shap_reason"]
+
+
+def test_predict_multi_model_with_artifacts(tmp_path, monkeypatch) -> None:
+    model_dir = tmp_path / "models"
+    features, target, pipeline, metadata = _write_artifacts(model_dir)
+
+    # Save all 3 model files into model_dir
+    joblib.dump(pipeline, model_dir / "logistic_regression.joblib")
+    joblib.dump(pipeline, model_dir / "random_forest.joblib")
+    joblib.dump(pipeline, model_dir / "xgboost.joblib")
+
+    monkeypatch.setenv("CHURNGUARD_MODEL_DIR", str(model_dir))
+    reloaded = importlib.reload(api)
+    with TestClient(reloaded.app) as client:
+        response = client.post(
+            "/predict",
+            json={
+                "tenure": 2,
+                "monthly_charges": 95.0,
+                "contract_type": 0,
+                "contract": "Month-to-month",
+                "internet_service": "Fiber optic",
+            },
+        )
+        assert response.status_code == 200
+        body = response.json()
+
+        assert "customer_profile" in body
+        assert "model_predictions" in body
+        for m_name in ("Logistic_Regression", "Random_Forest", "XGBoost"):
+            assert m_name in body["model_predictions"]
+            m_pred = body["model_predictions"][m_name]
+            assert m_pred["prediction"] in ("Churn", "No Churn")
+            assert 0.0 <= m_pred["probability"] <= 1.0
+            assert "drove this prediction" in m_pred["shap_reason"]
