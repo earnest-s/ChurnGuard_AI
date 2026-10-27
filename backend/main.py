@@ -960,7 +960,6 @@ def predict(payload: ChurnRequest):
                 app.state.pipeline, app.state.explainer, rows, metadata
             )
             aggregation = {"method": aggregation_method, "rows": int(len(rows))}
-            scored_input = rows
         else:
             assumed, aggregation = [], {"method": "single_row", "rows": 1}
             model = app.state.model
@@ -973,7 +972,6 @@ def predict(payload: ChurnRequest):
             importance = _coefficient_importance(model)
             factors = top_factors(importance, limit=3)
             method = "coefficients"
-            scored_input = vector
 
         # Multi-model individual predictions and SHAP reasons
         model_predictions: dict[str, ModelPredictionItem] = {}
