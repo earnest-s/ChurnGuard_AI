@@ -619,10 +619,10 @@ def build() -> Path:
         story.append(_img(actions_png, 14.2))
         story.append(
             Paragraph(
-                "Public GitHub Actions run for this commit: the Lint and test job is green. "
-                "The separate Azure deploy job still fails at azure/login because the service "
-                "principal is not associated with a subscription — an external RBAC issue, not a "
-                "code failure.",
+                "Public GitHub Actions job for rubric commit 2cd3174: Lint and test succeeded in "
+                "35 s (flake8 + 35 pytest tests). The separate Build and deploy job fails at "
+                "azure/login because the service principal has no subscription association - "
+                "an external RBAC issue, not a code failure.",
                 CAPTION,
             )
         )
