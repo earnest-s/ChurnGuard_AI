@@ -1,0 +1,44 @@
+ChurnGuard AI  ·  AutoML + XAI + DevOps
+Page 2 of 3
+Explainable AI — from global drivers to this customer
+Every POST /predict returns the probability, the original normalised importance, signed top_factors and an English explanation. The
+React UI renders the signed values as a SHAP force plot.
+Live React UI (headless Chrome, real API): High Risk,
+74.28%, importance bars and the signed force plot. The form
+is above; the optional-profile section and model meta are
+below the crop.
+SHAP force plot for the highest-risk hold-out customer (shap.plots.force(..., matplotlib=True)).
+Red pushes the prediction toward churn; blue pushes it toward retention.
+How to read the GUI
+The live React screenshot (left) shows High Risk · 74.28%, the normalised importance bars, and
+the signed force plot built from top_factors. Each row is a feature; the bar grows from the
+centreline toward retention (green, left) or churn (red, right), and the printed number is the log-odds
+contribution. This answers "why this customer?" rather than only "which features matter globally?".
+Innovation · kNN marginalisation
+A retention agent rarely has all 19 Telco fields. Instead of filling missing inputs with one made-up
+"typical" row or per-column medians, the API averages the model over the 100 training customers
+closest to the supplied inputs in tenure and monthly charges (distance in standard deviations).
+Supplied values are applied to every one of those rows. This estimates P(churn | supplied)
+by marginalising over the missing dimensions, so the score and its SHAP values stay on-manifold.
+The response names the inferred fields in assumed_features and reports aggregation =
+{method: neighbour_average, rows: 100}; a single-row fast path is used when every
+input is supplied. SHAP values are averaged over the same look-alike rows, so the force plot
+explains the number actually returned.
+The same explanation from the API
+Request: tenure 2, MonthlyCharges 95, month-to-month, 4 support calls, fibre optic, electronic check, paperless billing, no tech support. Response: High Risk ·
+74.28%. SHAP drivers averaged over 100 similar customers: MonthlyCharges (-1.800), tenure (+1.749), InternetService (+1.197). Positive values push the
+prediction toward churn, negative values away from it.
+ Feature
+SHAP (log-odds)
+Direction
+MonthlyCharges
+-1.7995
+toward retention
+tenure
++1.7493
+toward churn
+InternetService
++1.1970
+toward churn
+The kNN path inferred 11 fields and reported aggregation.rows = 100. SHAP values describe model behaviour, not causal effects: they say which inputs the model relied
+on, not what would happen if a customer changed a feature.

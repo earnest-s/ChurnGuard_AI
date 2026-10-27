@@ -406,7 +406,7 @@ def build() -> Path:
             "<b>F1 = 1.0000</b>, which is the expected signature of leakage. The script prints a "
             "warning, drops the column, and retrains; the column never enters the real feature "
             "frame or the deployed pipeline. The same audit checks identifier removal, duplicate "
-            "rows, fit/transform isolation, <font name='Courier'>TotalCharges ≈ tenure × "
+            "rows, fit/transform isolation, <font name='Courier'>TotalCharges ~= tenure x "
             "MonthlyCharges</font> redundancy (r = 1.000, known at prediction time, so redundancy "
             "rather than target leakage), class balance, and fairness slices.",
             SMALL,
@@ -416,38 +416,28 @@ def build() -> Path:
     left = [
         shap_summary,
         Paragraph(
-            "SHAP summary (mean absolute value, 200 hold-out rows). Top drivers: "
-            "<b>MonthlyCharges 0.1790</b>, <b>tenure 0.1561</b>, <b>InternetService 0.1242</b>, "
-            "Contract 0.0729, TotalCharges 0.0693.",
+            "Global SHAP summary (mean |SHAP|, 200 hold-out rows). Top drivers: "
+            "<b>MonthlyCharges 0.1790</b>, <b>tenure 0.1561</b>, <b>InternetService 0.1242</b>.",
             CAPTION,
         ),
     ]
     right = [
-        Paragraph("SHAP summary &amp; model card", H2),
-        Paragraph(
-            "The summary plot ranks the global drivers; the per-customer force plot on page 2 "
-            "explains one prediction. Global importance is the mean absolute SHAP value over the "
-            "hold-out; local importance is the signed contribution for the request.",
-            SMALL,
-        ),
         Paragraph("GET /model-card", H3),
         Paragraph(
-            "Returns dataset description, metrics (baseline vs deployed), intended use, known "
-            "limits, feature list, explainability method, fairness slices, leakage checks, the "
-            "leakage probe, AutoML tool runs and validation summary. Keys: "
-            "<font name='Courier'>schema_version, model, dataset, metrics, intended_use, "
-            "known_limits, features, explainability, fairness, leakage_checks, leakage_probe, "
-            "automl_tools, validation, versions</font>.",
+            "Dataset, metrics (baseline vs deployed), intended use, known limits, features, "
+            "explainability, fairness slices, leakage checks/probe, AutoML runs and validation. "
+            "Keys: <font name='Courier'>model, dataset, metrics, intended_use, known_limits, "
+            "features, explainability, fairness, leakage_checks, leakage_probe, automl_tools, "
+            "validation</font>.",
             SMALL,
         ),
         Paragraph("Honest result", H3),
         Paragraph(
-            f"The tuned AutoML winner scored hold-out F1 <b>{metrics['automl']['f1']:.4f}</b> versus "
+            f"Tuned AutoML hold-out F1 <b>{metrics['automl']['f1']:.4f}</b> vs "
             f"<b>{metrics['baseline']['f1']:.4f}</b> for the Optuna baseline "
-            f"(<b>{metrics['f1_improvement_over_baseline']:+.4f}</b>). That is well inside the CV "
-            "standard deviation (0.0216). AutoML contributes a defensible selection process, a "
-            "tuning record and a model card, not free accuracy; the report does not claim an "
-            "AutoML improvement.",
+            f"(<b>{metrics['f1_improvement_over_baseline']:+.4f}</b>), well inside the CV standard "
+            "deviation (0.0216). AutoML adds a selection process, tuning record and model card, "
+            "not free accuracy; no improvement is claimed.",
             SMALL,
         ),
     ]
@@ -533,14 +523,14 @@ def build() -> Path:
             "importance bars, and the signed force plot built from <font name='Courier'>"
             "top_factors</font>. Each row is a feature; the bar grows from the centreline toward "
             "retention (green, left) or churn (red, right), and the printed number is the "
-            "log-odds contribution. This answers “why this customer?” rather than only “which "
-            "features matter globally?”.",
+            "log-odds contribution. This answers \"why this customer?\" rather than only \"which "
+            "features matter globally?\".",
             SMALL,
         ),
         Paragraph("Innovation · kNN marginalisation", H2),
         Paragraph(
             "A retention agent rarely has all 19 Telco fields. Instead of filling missing inputs "
-            "with one made-up “typical” row or per-column medians, the API averages the model over "
+            "with one made-up \"typical\" row or per-column medians, the API averages the model over "
             "the <b>100 training customers closest to the supplied inputs in tenure and monthly "
             "charges</b> (distance in standard deviations). Supplied values are applied to every "
             "one of those rows. This estimates <font name='Courier'>P(churn | supplied)</font> by "

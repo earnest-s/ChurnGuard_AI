@@ -1,0 +1,38 @@
+ChurnGuard AI  ·  AutoML + XAI + DevOps
+Page 1 of 3
+ChurnGuard AI — AutoML, XAI & DevOps
+Three-page report · IBM Telco Customer Churn · FastAPI + React + SHAP · all numbers below are from docs/training_run.log
+(EXITCODE=0)
+Problem & dataset
+Predict whether a telecom customer will churn (binary classification; churn is the positive class). The IBM Telco sample has 7,043 accounts and
+20 columns. After dropping customerID and 11 rows with a blank TotalCharges, the cleaned data has 7,032 rows and 19 features (3
+numeric, 16 categorical) with a churn rate of 0.266. The split is stratified 80/20: 5,625 train / 1,407 hold-out rows (random_state=42). F1 is
+the primary metric because the classes are imbalanced and a missed churner costs more than a wasted retention offer; precision, recall and
+ROC-AUC are reported alongside it.
+Step 2 · Optuna Bayesian optimisation (baseline)
+Optuna's TPE sampler tuned regularisation C, class_weight and fit_intercept with 3-fold stratified CV on the training partition only. Best CV F1 0.6338;
+hold-out F1 0.6061 (precision 0.4901, recall 0.7941, ROC-AUC 0.8351). The untuned reference scored 0.5960 CV / 0.6099 hold-out.
+Step 3 · PyCaret vs FLAML under the same 60-second budget
+PyCaret's internal split is disabled (train_size=0.999) and compare_models is capped at 60 seconds; FLAML is capped at time_budget=60 seconds.
+Both are scored on the exact same 1,407-row hold-out, so the comparison is apples-to-apples. PyCaret selected logistic regression (0.6082); FLAML spent its
+budget on a small random forest (0.5844).
+Step 4 · Critical evaluation: deliberate leakage
+A synthetic future_churn_indicator column was appended to copies of the frames as an exact copy of the label. The probe model reached F1 = 1.0000,
+which is the expected signature of leakage. The script prints a warning, drops the column, and retrains; the column never enters the real feature frame or the
+deployed pipeline. The same audit checks identifier removal, duplicate rows, fit/transform isolation, TotalCharges ~= tenure x MonthlyCharges
+redundancy (r = 1.000, known at prediction time, so redundancy rather than target leakage), class balance, and fairness slices.
+Global SHAP summary (mean |SHAP|, 200 hold-out rows). Top drivers:
+MonthlyCharges 0.1790, tenure 0.1561, InternetService 0.1242.
+GET /model-card
+Dataset, metrics (baseline vs deployed), intended use, known limits,
+features, explainability, fairness slices, leakage checks/probe, AutoML runs
+and validation. Keys: model, dataset, metrics, intended_use,
+known_limits, features, explainability, fairness,
+leakage_checks, leakage_probe, automl_tools, validation.
+Honest result
+Tuned AutoML hold-out F1 0.6054 vs 0.6061 for the Optuna baseline
+(-0.0007), well inside the CV standard deviation (0.0216). AutoML adds a
+selection process, tuning record and model card, not free accuracy; no
+improvement is claimed.
+Executable validation: 6/6 PASS — Optuna completed · FLAML vs PyCaret comparison completed · leakage detected and dropped · SHAP plots
+generated · /metrics and /model-card present · K8s and Terraform files exist.
