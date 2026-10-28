@@ -1253,7 +1253,7 @@ def train(args: argparse.Namespace) -> int:
     print("\n" + "=" * 60)
     print("STEP 4: DELIBERATE LEAKAGE TEST")
     print("=" * 60)
-    df_leak = dataframe.copy()
+    df_leak = raw_dataframe.copy()
     df_leak['future_churn_indicator'] = df_leak['Churn']
     X_leak = _pd.get_dummies(df_leak.drop('Churn', axis=1), drop_first=True)
     y_leak = df_leak['Churn']
