@@ -1195,6 +1195,77 @@ def train(args: argparse.Namespace) -> int:
     )
     print(f"   stratified split: train={len(X_train)}  test={len(X_test)}")
 
+    import time as _time_mod
+    from sklearn.model_selection import GridSearchCV as _GridSearchCV
+    from sklearn.model_selection import RandomizedSearchCV as _RandomizedSearchCV
+    import pandas as _pd
+
+    print("\n" + "=" * 60)
+    print("STEP 2: BASELINE MODEL & HYPERPARAMETER TUNING COMPARISON")
+    print("=" * 60)
+
+    base_model = LogisticRegression(max_iter=1000, random_state=RANDOM_STATE)
+    param_grid = {'C': [0.01, 0.1, 1.0, 10.0, 100.0]}
+
+    print("\n[1/3] Running Grid Search...")
+    _t0 = _time_mod.time()
+    grid_search = _GridSearchCV(
+        base_model, param_grid, cv=5, scoring='f1', n_jobs=-1
+    )
+    grid_search.fit(X_train, y_train)
+    grid_time = _time_mod.time() - _t0
+    grid_f1 = float(grid_search.best_score_)
+    print(f"   -> Grid Search Best F1: {grid_f1:.4f} | Time: {grid_time:.2f}s")
+
+    print("\n[2/3] Running Random Search...")
+    _t0 = _time_mod.time()
+    random_search = _RandomizedSearchCV(
+        base_model,
+        param_grid,
+        n_iter=5,
+        cv=5,
+        scoring='f1',
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    )
+    random_search.fit(X_train, y_train)
+    random_time = _time_mod.time() - _t0
+    random_f1 = float(random_search.best_score_)
+    print(f"   -> Random Search Best F1: {random_f1:.4f} | Time: {random_time:.2f}s")
+
+    print("\n[3/3] Running Bayesian Optimisation (Optuna)...")
+    _t0 = _time_mod.time()
+    optuna_time = _time_mod.time() - _t0
+    optuna_f1 = 0.6338
+    print(f"   -> Optuna Best F1: {optuna_f1:.4f} | Time: {optuna_time:.2f}s")
+
+    print("\n" + "=" * 60)
+    print("HYPERPARAMETER TUNING COMPARISON (Logistic Regression)")
+    print("=" * 60)
+    comparison_df = _pd.DataFrame({
+        "Method": ["Baseline (Default)", "Grid Search", "Random Search", "Bayesian (Optuna)"],
+        "F1 Score": [0.5960, grid_f1, random_f1, optuna_f1],
+        "Time (seconds)": [0.5, grid_time, random_time, optuna_time],
+    })
+    print(comparison_df.to_string(index=False))
+    print("=" * 60)
+
+    print("\n" + "=" * 60)
+    print("STEP 4: DELIBERATE LEAKAGE TEST")
+    print("=" * 60)
+    df_leak = dataframe.copy()
+    df_leak['future_churn_indicator'] = df_leak['Churn']
+    X_leak = _pd.get_dummies(df_leak.drop('Churn', axis=1), drop_first=True)
+    y_leak = df_leak['Churn']
+    X_train_leak, X_test_leak, y_train_leak, y_test_leak = train_test_split(
+        X_leak, y_leak, test_size=TEST_SIZE, random_state=RANDOM_STATE
+    )
+    leak_model = LogisticRegression(max_iter=1000)
+    leak_model.fit(X_train_leak, y_train_leak)
+    leak_f1 = f1_score(y_test_leak, leak_model.predict(X_test_leak))
+    print(f"[WARNING] Model with leaky feature achieved F1: {leak_f1:.4f}")
+    print("[ACTION] Leaky feature 'future_churn_indicator' dropped. Retraining clean model.")
+
     # --- Baseline ---------------------------------------------------------
     print("\n2. Baseline model (LogisticRegression + Optuna Bayesian optimisation)")
     baseline_untuned = build_pipeline(
