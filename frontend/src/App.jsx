@@ -1,10 +1,8 @@
 import { useState } from 'react'
 
 const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim()
-const API_URL =
-  typeof window !== 'undefined' && window.location.protocol === 'https:'
-    ? rawApiUrl.replace(/^http:\/\//i, 'https://')
-    : rawApiUrl
+// Hardcoded to the live Azure backend IP
+const API_URL = "http://4.186.146.187:8000";
 
 const initialFormState = {
   tenure: '',
@@ -127,11 +125,11 @@ export default function App() {
         importance,
         topFactors: Array.isArray(data.top_factors)
           ? data.top_factors.filter(
-              (factor) =>
-                factor &&
-                typeof factor.feature === 'string' &&
-                typeof factor.contribution === 'number',
-            )
+            (factor) =>
+              factor &&
+              typeof factor.feature === 'string' &&
+              typeof factor.contribution === 'number',
+          )
           : [],
         explanation: typeof data.explanation === 'string' ? data.explanation : '',
         modelName: typeof data.model_name === 'string' ? data.model_name : '',
@@ -186,8 +184,8 @@ export default function App() {
 
   const featureEntries = result?.importance
     ? Object.entries(result.importance)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
     : []
 
   const topFeature = featureEntries.reduce(
