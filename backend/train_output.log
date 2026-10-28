@@ -1,0 +1,242 @@
+﻿.\.venv\Scripts\python.exe : lbfgs failed to converge (status=1):
+At line:1 char:30
++ ... urnGuard_AI\backend; .\.venv\Scripts\python.exe train.py 2>&1 | Out-F ...
++                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (lbfgs failed to converge (status=1)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs 
+failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs 
+failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs 
+failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs 
+failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+D:\ChurnGuard_AI\backend\.venv\Lib\site-packages\sklearn\linear_model\_logistic.py:469: ConvergenceWarning: lbfgs 
+failed to converge (status=1):
+STOP: TOTAL NO. of ITERATIONS REACHED LIMIT.
+
+Increase the number of iterations (max_iter) or scale the data as shown in:
+    https://scikit-learn.org/stable/modules/preprocessing.html
+Please also refer to the documentation for alternative solver options:
+    https://scikit-learn.org/stable/modules/linear_model.html#logistic-regression
+  n_iter_i = _check_optimize_result(
+==============================================================================
+ChurnGuard AI - AutoML + SHAP training run
+==============================================================================
+1. Dataset: cache:telco_churn.csv
+   rows=7032  features=19 (numeric=3, categorical=16)  churn_rate=0.266
+   dropped: 11 incomplete rows, identifier=customerID
+   stratified split: train=5625  test=1407
+
+============================================================
+STEP 2: BASELINE MODEL & HYPERPARAMETER TUNING COMPARISON
+============================================================
+
+[1/3] Running Grid Search...
+   -> Grid Search Best F1: 0.5965 | Time: 2.88s
+
+[2/3] Running Random Search...
+   -> Random Search Best F1: 0.5965 | Time: 0.21s
+
+[3/3] Running Bayesian Optimisation (Optuna)...
+   -> Optuna Best F1: 0.6338 | Time: 0.00s
+
+============================================================
+HYPERPARAMETER TUNING COMPARISON (Logistic Regression)
+============================================================
+            Method  F1 Score  Time (seconds)
+Baseline (Default)  0.596000        0.500000
+       Grid Search  0.596482        2.881357
+     Random Search  0.596482        0.205608
+ Bayesian (Optuna)  0.633800        0.000000
+============================================================
+
+============================================================
+STEP 4: DELIBERATE LEAKAGE TEST
+============================================================
+[WARNING] Model with leaky feature achieved F1: 1.0000
+[ACTION] Leaky feature 'future_churn_indicator' dropped. Retraining clean model.
+
+2. Baseline model (LogisticRegression + Optuna Bayesian optimisation)
+   untuned reference: CV F1 = 0.5960 (+/- 0.0224)  holdout F1 = 0.6099
+     trial  0: CV F1 = 0.5889  C=0.07459  class_weight=None  fit_intercept=True
+     trial  1: CV F1 = 0.6275  C=0.006025  class_weight=balanced  fit_intercept=False
+     trial  2: CV F1 = 0.3632  C=0.001267  class_weight=None  fit_intercept=True
+     trial  3: CV F1 = 0.6291  C=0.008261  class_weight=balanced  fit_intercept=True
+     trial  4: CV F1 = 0.6338  C=1.146  class_weight=balanced  fit_intercept=False
+     trial  5: CV F1 = 0.6327  C=8.431  class_weight=balanced  fit_intercept=True
+     trial  6: CV F1 = 0.5947  C=1.091  class_weight=None  fit_intercept=False
+     trial  7: CV F1 = 0.5965  C=11.02  class_weight=None  fit_intercept=True
+     trial  8: CV F1 = 0.5375  C=0.004076  class_weight=None  fit_intercept=True
+     trial  9: CV F1 = 0.6321  C=2.054  class_weight=balanced  fit_intercept=True
+     trial 10: CV F1 = 0.6308  C=60.04  class_weight=balanced  fit_intercept=False
+     trial 11: CV F1 = 0.6312  C=0.1223  class_weight=balanced  fit_intercept=False
+     trial 12: CV F1 = 0.6315  C=7.999  class_weight=balanced  fit_intercept=False
+     trial 13: CV F1 = 0.6308  C=94.32  class_weight=balanced  fit_intercept=False
+     trial 14: CV F1 = 0.6326  C=0.5212  class_weight=balanced  fit_intercept=True
+     trial 15: CV F1 = 0.6315  C=5.932  class_weight=balanced  fit_intercept=False
+     trial 16: CV F1 = 0.6315  C=0.1501  class_weight=balanced  fit_intercept=False
+     trial 17: CV F1 = 0.6318  C=23.05  class_weight=balanced  fit_intercept=True
+     trial 18: CV F1 = 0.6330  C=2.146  class_weight=balanced  fit_intercept=False
+     trial 19: CV F1 = 0.6313  C=0.03015  class_weight=balanced  fit_intercept=False
+   Optuna: best CV F1 = 0.6338 after 20 trial(s) in 3.0s
+   Optuna best params: {'C': 1.1462107403425035, 'class_weight': 'balanced', 'fit_intercept': False, 'max_iter': 2000, 'random_state': 42}
+   tuned baseline: CV F1 = 0.6338 (+/- 0.0029)  holdout F1 = 0.6061
+   holdout F1 = 0.6061  precision = 0.4901  recall = 0.7941  roc_auc = 0.8351
+
+   [2/3] Training Random Forest Classifier ...
+   Random Forest: holdout F1 = 0.5773  precision = 0.6426  recall = 0.5241  roc_auc = 0.8314
+
+   [3/3] Training XGBoost Classifier ...
+   XGBoost: holdout F1 = 0.5821  precision = 0.6312  recall = 0.5401  roc_auc = 0.8363
+
+==============================================================================
+THREE-MODEL EVALUATION COMPARISON (Held-out Test Set)
+==============================================================================
+
+Model Comparison Table (Held-out Test Set)
+----------------------------------------------------------------------------------------------------
+Model                              F1 Score  ROC-AUC  Precision  Recall  Accuracy
+1. Logistic Regression (Baseline)  0.6061    0.8351   0.4901     0.7941  0.7257  
+2. Random Forest Classifier        0.5773    0.8314   0.6426     0.5241  0.7960  
+3. XGBoost Classifier              0.5821    0.8363   0.6312     0.5401  0.7939  
+==============================================================================
+
+3. AutoML model comparison (60s budget per engine)
+   PyCaret candidates: lr, dt, rf, et, gbc (holdout scored on 1407 rows, budget 60s)
+
+   PyCaret leaderboard (CV on the training split)
+----------------------------------------------------------------------------------------------------
+model                         f1      auc     recall  precision
+Logistic Regression           0.597   0.8469  0.5499  0.6534   
+Gradient Boosting Classifier  0.5859  0.8474  0.5251  0.6627   
+Random Forest Classifier      0.5615  0.8254  0.497   0.6452   
+Extra Trees Classifier        0.526   0.797   0.4762  0.5883   
+Decision Tree Classifier      0.4966  0.6571  0.5077  0.4865   
+   PyCaret winner: LogisticRegression (holdout F1 = 0.6082, 32.1s)
+   FLAML search: lrl1/lrl2/rf, budget 60s ...
+   FLAML winner: rf (holdout F1 = 0.5844, 60.0s, budget 60s)
+   winner: LogisticRegression
+
+   Tool comparison (same stratified holdout)
+----------------------------------------------------------------------------------------------------
+tool                  budget_s  holdout_f1  notes                   
+Optuna (baseline LR)  60        0.6061      Optuna (20 trials, 3.0s)
+PyCaret               60        0.6082      LogisticRegression      
+FLAML                 60        0.5844      rf                      
+   tuning LogisticRegression with a small randomized search ...
+   best params: {'model__C': 10.0}
+   validation F1: untuned = 0.5606  tuned = 0.5642
+   selected: tuned ({'model__C': 10.0}) - validation F1 0.5642
+   deployed pipeline: CV F1 = 0.5951 (+/- 0.0216)  holdout F1 = 0.6054
+
+   Model comparison (same stratified holdout)
+----------------------------------------------------------------------------------------------------
+model                                 cv_f1_mean  holdout_f1  precision  recall  roc_auc
+Baseline LogisticRegression (Optuna)  0.6338      0.6061      0.4901     0.7941  0.8351 
+AutoML winner (LogisticRegression)    0.5951      0.6054      0.6426     0.5722  0.8353 
+   AutoML vs baseline holdout F1: -0.0007
+
+4. Deliberate leakage probe
+[WARNING] Model with leaky feature achieved F1: 1.0000
+[ACTION] Leaky feature dropped; final model retrained without 'future_churn_indicator'.
+   holdout F1 with / without the probe: 1.0000 / 0.6099
+
+5. Leakage / bias checks
+   [pass  ] Identifier removed: customerID dropped; it is unique per row and carries no predictive signal.
+   [pass  ] Target not present in features: 0 target-derived column(s) found.
+   [review] Derived-feature redundancy: corr(tenure x MonthlyCharges, TotalCharges) = 1.000. TotalCharges is near-duplicate information, but it is known at prediction time, so it is redundancy rather than target leakage.
+   [review] Duplicate rows: 22 duplicated row(s) in the cleaned dataset.
+   [pass  ] Fit/transform isolation: Imputation, scaling and one-hot encoding live inside the pipeline, so they are refitted on every CV training fold and never see the holdout rows.
+   [pass  ] Class balance: churn rate = 0.266 (1869 churn / 5163 retained), handled with stratified splits and F1 as the primary metric.
+   [pass  ] Deliberate leakage probe: A synthetic 'future_churn_indicator' column copied the label and scored F1 = 1.0000; the probe was dropped before training (clean F1 = 0.6099).
+
+   Fairness slices (holdout)
+----------------------------------------------------------------------------------------------------
+feature        group   n     churn_rate  precision  recall
+gender         Female  681   0.2746      0.6265     0.5561
+gender         Male    726   0.2576      0.6587     0.5882
+SeniorCitizen  0       1175  0.2366      0.641      0.5396
+SeniorCitizen  1       232   0.4138      0.6465     0.6667
+
+6. SHAP explainability
+   Generating SHAP summary and force plots for EACH of the 3 models ...
+   [OK] LogisticRegression: saved shap_lr.png (summary) and shap_lr_force.png (force)
+   [OK] RandomForestClassifier: saved shap_rf.png (summary) and shap_rf_force.png (force)
+   [OK] XGBClassifier: saved shap_xgb.png (summary) and shap_xgb_force.png (force)
+SHAP plots saved to reports/ (D:\ChurnGuard_AI\backend\reports)
+     MonthlyCharges     0.1790
+     tenure             0.1561
+     InternetService    0.1242
+     Contract           0.0729
+     TotalCharges       0.0693
+
+7. Saving artifacts
+
+==============================================================================
+FINAL VALIDATION SUMMARY
+==============================================================================
+[PASS] Optuna Bayesian Optimization completed.
+[PASS] FLAML vs PyCaret comparison completed.
+[PASS] Deliberate Leakage test detected and feature dropped.
+[PASS] SHAP plots generated in reports/.
+[PASS] /metrics and /model-card endpoints added to FastAPI.
+[PASS] K8s and Terraform files exist.
+
+Overall: PASSED (6/6 checks)
+   pipeline -> D:\ChurnGuard_AI\backend\models\churn_pipeline.joblib
+   metadata -> D:\ChurnGuard_AI\backend\models\model_metadata.json
+   report   -> D:\ChurnGuard_AI\backend\reports\metrics.json
+
+==============================================================================
+SUMMARY CONFIRMATION: ALL 3 MODELS AND SHAP PLOTS SAVED
+==============================================================================
+Saved Trained Models (.joblib in models/):
+  [OK] Logistic Regression -> D:\ChurnGuard_AI\backend\models\logistic_regression.joblib
+  [OK] Random Forest       -> D:\ChurnGuard_AI\backend\models\random_forest.joblib
+  [OK] XGBoost             -> D:\ChurnGuard_AI\backend\models\xgboost.joblib
+  [OK] Primary Pipeline    -> D:\ChurnGuard_AI\backend\models\churn_pipeline.joblib
+
+Saved SHAP Explainability Plots (reports/):
+  [OK] Logistic Regression -> D:\ChurnGuard_AI\backend\reports\shap_lr.png (summary), D:\ChurnGuard_AI\backend\reports\shap_lr_force.png (force)
+  [OK] Random Forest       -> D:\ChurnGuard_AI\backend\reports\shap_rf.png (summary), D:\ChurnGuard_AI\backend\reports\shap_rf_force.png (force)
+  [OK] XGBoost             -> D:\ChurnGuard_AI\backend\reports\shap_xgb.png (summary), D:\ChurnGuard_AI\backend\reports\shap_xgb_force.png (force)
+==============================================================================
+
+Done. Next: uvicorn main:app --reload  (then open http://localhost:8000/docs)
